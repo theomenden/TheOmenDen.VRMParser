@@ -1,0 +1,214 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<CorvusJsonSchemaOptionalAsNullable>NullOrUndefined</CorvusJsonSchemaOptionalAsNullable>
+		<CorvusJsonSchemaDefaultAccessibility>Internal</CorvusJsonSchemaDefaultAccessibility>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Remove="JsonSchemas\accessor.schema.json" />
+		<None Remove="JsonSchemas\accessor.sparse.indices.schema.json" />
+		<None Remove="JsonSchemas\accessor.sparse.schema.json" />
+		<None Remove="JsonSchemas\accessor.sparse.values.schema.json" />
+		<None Remove="JsonSchemas\animation.channel.schema.json" />
+		<None Remove="JsonSchemas\animation.channel.target.schema.json" />
+		<None Remove="JsonSchemas\animation.sampler.schema.json" />
+		<None Remove="JsonSchemas\animation.schema.json" />
+		<None Remove="JsonSchemas\asset.schema.json" />
+		<None Remove="JsonSchemas\buffer.schema.json" />
+		<None Remove="JsonSchemas\bufferView.schema.json" />
+		<None Remove="JsonSchemas\camera.orthographic.schema.json" />
+		<None Remove="JsonSchemas\camera.perspective.schema.json" />
+		<None Remove="JsonSchemas\camera.schema.json" />
+		<None Remove="JsonSchemas\extension.schema.json" />
+		<None Remove="JsonSchemas\extras.schema.json" />
+		<None Remove="JsonSchemas\glTF.schema.json" />
+		<None Remove="JsonSchemas\glTFChildOfRootProperty.schema.json" />
+		<None Remove="JsonSchemas\glTFid.schema.json" />
+		<None Remove="JsonSchemas\glTFProperty.schema.json" />
+		<None Remove="JsonSchemas\image.schema.json" />
+		<None Remove="JsonSchemas\material.normalTextureInfo.schema.json" />
+		<None Remove="JsonSchemas\material.occlusionTextureInfo.schema.json" />
+		<None Remove="JsonSchemas\material.pbrMetallicRoughness.schema.json" />
+		<None Remove="JsonSchemas\material.schema.json" />
+		<None Remove="JsonSchemas\mesh.primitive.schema.json" />
+		<None Remove="JsonSchemas\mesh.schema.json" />
+		<None Remove="JsonSchemas\mtoon.shadingShiftTexture.schema.json" />
+		<None Remove="JsonSchemas\node.schema.json" />
+		<None Remove="JsonSchemas\sampler.schema.json" />
+		<None Remove="JsonSchemas\scene.schema.json" />
+		<None Remove="JsonSchemas\skin.schema.json" />
+		<None Remove="JsonSchemas\texture.schema.json" />
+		<None Remove="JsonSchemas\textureInfo.schema.json" />
+		<None Remove="JsonSchemas\vrm.blendshape.bind.schema.json" />
+		<None Remove="JsonSchemas\vrm.blendshape.group.schema.json" />
+		<None Remove="JsonSchemas\vrm.blendshape.materialbind.schema.json" />
+		<None Remove="JsonSchemas\vrm.blendshape.schema.json" />
+		<None Remove="JsonSchemas\vrm.firstperson.degreemap.schema.json" />
+		<None Remove="JsonSchemas\vrm.firstperson.meshannotation.schema.json" />
+		<None Remove="JsonSchemas\vrm.firstperson.schema.json" />
+		<None Remove="JsonSchemas\vrm.humanoid.bone.schema.json" />
+		<None Remove="JsonSchemas\vrm.humanoid.schema.json" />
+		<None Remove="JsonSchemas\vrm.material.schema.json" />
+		<None Remove="JsonSchemas\vrm.meta.schema.json" />
+		<None Remove="JsonSchemas\vrm.schema.json" />
+		<None Remove="JsonSchemas\vrm.secondaryanimation.collidergroup.schema.json" />
+		<None Remove="JsonSchemas\vrm.secondaryanimation.schema.json" />
+		<None Remove="JsonSchemas\vrm.secondaryanimation.spring.schema.json" />
+		<None Remove="JsonSchemas\VRMC_materials_hdr_emissiveMultiplier.json" />
+		<None Remove="JsonSchemas\VRMC_materials_mtoon.schema.json" />
+		<None Remove="JsonSchemas\VRMC_node_constraint.aimConstraint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_node_constraint.constraint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_node_constraint.rollConstraint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_node_constraint.rotationConstraint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_node_constraint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.collider.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.colliderGroup.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.joint.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.shape.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone.spring.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone_extended_collider.schema.json" />
+		<None Remove="JsonSchemas\VRMC_springBone_extended_collider.shape.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.expressions.expression.materialColorBind.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.expressions.expression.morphTargetBind.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.expressions.expression.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.expressions.expression.textureTransformBind.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.expressions.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.firstPerson.meshAnnotation.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.firstPerson.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.humanoid.humanBones.humanBone.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.humanoid.humanBones.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.humanoid.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.lookAt.rangeMap.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.lookAt.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.meta.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.expressions.expression.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.expressions.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.humanoid.humanBones.humanBone.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.humanoid.humanBones.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.humanoid.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.lookAt.schema.json" />
+		<None Remove="JsonSchemas\VRMC_vrm_animation.schema.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AdditionalFiles Include="JsonSchemas\accessor.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\accessor.sparse.indices.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\accessor.sparse.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\accessor.sparse.values.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\animation.channel.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\animation.channel.target.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\animation.sampler.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\animation.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\asset.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\buffer.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\bufferView.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\camera.orthographic.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\camera.perspective.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\camera.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\extension.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\extras.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\glTF.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\glTFChildOfRootProperty.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\glTFid.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\glTFProperty.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\image.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\material.normalTextureInfo.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\material.occlusionTextureInfo.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\material.pbrMetallicRoughness.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\material.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\mesh.primitive.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\mesh.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\mtoon.shadingShiftTexture.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\node.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\sampler.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\scene.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\skin.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\texture.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\textureInfo.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.blendshape.bind.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.blendshape.group.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.blendshape.materialbind.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.blendshape.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.firstperson.degreemap.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.firstperson.meshannotation.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.firstperson.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.humanoid.bone.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.humanoid.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.material.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.meta.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.secondaryanimation.collidergroup.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.secondaryanimation.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\vrm.secondaryanimation.spring.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_materials_hdr_emissiveMultiplier.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_materials_mtoon.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_node_constraint.aimConstraint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_node_constraint.constraint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_node_constraint.rollConstraint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_node_constraint.rotationConstraint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_node_constraint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.collider.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.colliderGroup.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.joint.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.shape.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone.spring.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone_extended_collider.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_springBone_extended_collider.shape.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.expressions.expression.materialColorBind.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.expressions.expression.morphTargetBind.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.expressions.expression.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.expressions.expression.textureTransformBind.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.expressions.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.firstPerson.meshAnnotation.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.firstPerson.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.humanoid.humanBones.humanBone.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.humanoid.humanBones.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.humanoid.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.lookAt.rangeMap.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.lookAt.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.meta.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.expressions.expression.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.expressions.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.humanoid.humanBones.humanBone.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.humanoid.humanBones.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.humanoid.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.lookAt.schema.json" />
+		<AdditionalFiles Include="JsonSchemas\VRMC_vrm_animation.schema.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Corvus.Json.CodeGeneration" Version="4.3.19" />
+		<PackageReference Include="Corvus.Json.ExtendedTypes" Version="4.3.19" />
+		<PackageReference Include="Corvus.Json.SourceGenerator" Version="4.3.19">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
+		<PackageReference Include="Roslynator.Analyzers" Version="4.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="SonarAnalyzer.CSharp" Version="10.15.0.120848">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.Threading.Channels" Version="9.0.9" />
+	</ItemGroup>
+
+</Project>
