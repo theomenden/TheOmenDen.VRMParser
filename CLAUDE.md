@@ -28,8 +28,10 @@ for the data shapes; hand-written code wraps the generated types.
 ```
 TheOmenDen.VRMParser/
   JsonSchemas/            # Schema source of truth (AdditionalFiles → Corvus codegen)
+  Glb/                    # Binary GLB container layer (feature folder)
+    GlbDocument.cs        # Parse/write the .glb/.vrm container: header + JSON/BIN chunks; round-trips byte-stable
+    GlbFormatException.cs # Thrown on malformed GLB (bad magic/version, misaligned/truncated chunks)
   Models/
-    GlbDocument.cs        # The parsed .glb/.vrm container (binary chunks + glTF root)
     Records/              # Corvus [JsonSchemaTypeGenerator] partial structs, one per schema area
       GltfRoot.cs, Gltf*.cs        # glTF 2.0 core
       Vrm0.cs                      # VRM 0.x extension
@@ -37,10 +39,16 @@ TheOmenDen.VRMParser/
       PathingConstants.cs          # Centralized schema path constants
 ```
 
-As parsing/serialization logic grows, add **feature folders** alongside `Models/` — e.g.
-`Glb/` (binary chunk reader/writer), `Gltf/` (core glTF parse + emit), `Vrm0/`, `Vrm1/`. Keep each
-self-contained: a feature's reader, writer, and helpers live together. Avoid a single god-class
-parser and avoid horizontal `Parsers/`, `Serializers/` buckets that split one feature across folders.
+`GlbDocument` (namespace `TheOmenDen.VRMParser.Glb`) is the entry point: `GlbDocument.Parse(bytes)`
+/ `TryParse` → `Json` + `Binary` chunk payloads, and `ToBytes()` / `WriteTo(stream)` back out. It keeps
+chunk payloads verbatim so a parse → write cycle is byte-stable for compliant input. The typed glTF
+model is reached via the internal `ParseGltf()` bridge (`ParsedJsonDocument<GltfRoot>`), since the
+generated model is `internal`; the test project sees it through `InternalsVisibleTo`.
+
+As more parsing/serialization lands, add sibling **feature folders** — `Gltf/` (core glTF parse +
+emit), `Vrm0/`, `Vrm1/`. Keep each self-contained: a feature's reader, writer, and helpers live
+together. Avoid a single god-class parser and avoid horizontal `Parsers/`, `Serializers/` buckets
+that split one feature across folders.
 
 ### Read + write (round-trip)
 
