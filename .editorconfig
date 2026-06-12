@@ -1,0 +1,9 @@
+root = true
+
+# Source-generated Corvus.Text.Json files.
+# The V5 source generator emits calls to its own [Obsolete] ParseValue(...) API
+# (a pooled-memory change in 5.x). That's generated-code-only noise we don't control,
+# so silence CS0618 here ONLY — hand-written code still gets the warning.
+[*.g.cs]
+generated_code = true
+dotnet_diagnostic.CS0618.severity = none
