@@ -1,6 +1,6 @@
 ﻿namespace TheOmenDen.VRMParser.Models.Records;
 
-public static class PathingConstants
+internal static class PathingConstants
 {
     public const string JsonSchemasPath = "JsonSchemas/";
     public const string GltfPath = $"{JsonSchemasPath}glTF";
