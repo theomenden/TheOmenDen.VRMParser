@@ -2,7 +2,7 @@
 
 A .NET library for parsing — and round-tripping — **VRM** avatar files (VRoid / VTuber model
 format) built on the **glTF 2.0** container. Strongly-typed models are source-generated from the
-official JSON Schemas via **Corvus.Json**; the library adds the binary `.glb`/`.vrm` parsing,
+official JSON Schemas via **Corvus.Text.Json** (v5); the library adds the binary `.glb`/`.vrm` parsing,
 VRM 0.x / VRM 1.0 extension handling, and serialization on top.
 
 Distributed as a **NuGet package** (class library, no entry point).
@@ -13,7 +13,7 @@ Distributed as a **NuGet package** (class library, no entry point).
 |--------------------|--------------------------------------------------------------------|
 | Target framework   | `net10.0` (SDK pinned via `global.json`, `rollForward: latestMinor`) |
 | Language           | C# 14, `ImplicitUsings` + `Nullable` enabled                       |
-| Model generation   | Corvus.Json (`Corvus.Json.SourceGenerator`, `*.ExtendedTypes`, `*.CodeGeneration`) |
+| Model generation   | Corvus.Text.Json v5 (`Corvus.Text.Json` + `.SourceGenerator` + `.CodeGeneration`); namespace is `Corvus.Text.Json` |
 | Concurrency        | `System.Threading.Channels` (in the net10 shared framework — no package ref needed) |
 | Logging            | `Microsoft.Extensions.Logging` abstractions only                  |
 | Analyzers          | Roslynator, Roslynator.CodeAnalysis, SonarAnalyzer.CSharp (treat warnings seriously) |
@@ -57,8 +57,9 @@ back to bytes. Design with that in mind:
 
 - **File-scoped namespaces** everywhere (`namespace TheOmenDen.VRMParser.Models.Records;`).
 - Generated model wrappers are `internal readonly partial struct` decorated with
-  `[JsonSchemaTypeGenerator(...)]`. Default Corvus accessibility is `Internal`
-  (`CorvusJsonSchemaDefaultAccessibility`); optional members map to `NullOrUndefined`. Public API
+  `[JsonSchemaTypeGenerator(...)]` (from `using Corvus.Text.Json;`). Default Corvus accessibility is
+  `Internal` (`CorvusTextJsonDefaultAccessibility`); optional members map to `NullOrUndefined`
+  (`CorvusTextJsonOptionalAsNullable`). Public API
   surface is deliberately small — expose only what consumers need, keep generated types internal.
 - Schema paths are referenced through **`PathingConstants`** constants, not string literals. When you
   add a schema, add its path constant there and an `AdditionalFiles` entry in the `.csproj`.

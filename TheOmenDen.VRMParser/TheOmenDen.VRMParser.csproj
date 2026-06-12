@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<CorvusJsonSchemaOptionalAsNullable>NullOrUndefined</CorvusJsonSchemaOptionalAsNullable>
-		<CorvusJsonSchemaDefaultAccessibility>Internal</CorvusJsonSchemaDefaultAccessibility>
+		<CorvusTextJsonOptionalAsNullable>NullOrUndefined</CorvusTextJsonOptionalAsNullable>
+		<CorvusTextJsonDefaultAccessibility>Internal</CorvusTextJsonDefaultAccessibility>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -189,9 +189,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Corvus.Json.CodeGeneration" Version="4.3.19" />
-		<PackageReference Include="Corvus.Json.ExtendedTypes" Version="4.3.19" />
-		<PackageReference Include="Corvus.Json.SourceGenerator" Version="4.3.19">
+		<PackageReference Include="Corvus.Text.Json" Version="5.1.16" />
+		<PackageReference Include="Corvus.Text.Json.CodeGeneration" Version="5.1.16" />
+		<PackageReference Include="Corvus.Text.Json.SourceGenerator" Version="5.1.16">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

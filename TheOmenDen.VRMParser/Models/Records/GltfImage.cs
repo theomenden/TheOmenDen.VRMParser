@@ -1,4 +1,4 @@
-﻿using Corvus.Json;
+﻿using Corvus.Text.Json;
 
 namespace TheOmenDen.VRMParser.Models.Records;
 [JsonSchemaTypeGenerator($"../../{PathingConstants.ImagePath}{PathingConstants.SchemaJsonSuffix}")]
