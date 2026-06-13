@@ -141,10 +141,20 @@ dotnet build                # builds via TheOmenDen.VRMParser.slnx; Corvus codeg
 dotnet build -c Release
 dotnet test                 # solution-level; MTP runner picked up from global.json
 dotnet run --project tests/TheOmenDen.VRMParser.Tests   # equivalent, easier flag passing
+
+# Performance + runtime diagnostics (BenchmarkDotNet; Release only)
+dotnet run -c Release --project benchmarks/TheOmenDen.VRMParser.Benchmarks -- --filter '*'
+# GC-pause / memory-pressure harness over a real avatar (DotNext GCNotification)
+dotnet run -c Release --project benchmarks/TheOmenDen.VRMParser.Benchmarks -- diagnostics
 ```
 
 The solution is **`.slnx`** (XML format) — there is no `.sln`. The SDK floor is **.NET 10**
 (`global.json`, `rollForward: latestMinor`).
+
+The **`benchmarks/`** feature folder holds the BenchmarkDotNet suite (read/write/bind paths, with
+`MemoryDiagnoser` + `ThreadingDiagnoser`) and a DotNext `GCNotification` GC-pause harness. Point
+`VRMPARSER_REAL_VRM_PATH` at a full-size `.vrm` for realistic IO/GC numbers; `--hw` adds Windows ETW
+hardware counters (admin only). See `benchmarks/TheOmenDen.VRMParser.Benchmarks/README.md`.
 
 CI (`.github/workflows/dotnet.yml`) is `workflow_dispatch` only and uses `dotnet test` on .NET 10.x
 — which now works because of the `global.json` MTP runner. Consider enabling `on: push` /
