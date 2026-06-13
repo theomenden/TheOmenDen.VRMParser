@@ -4,6 +4,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/TheOmenDen.VRMParser.Benchmarks/TheOmenDen.VRMParser.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TheOmenDen.VRMParser.Tests/TheOmenDen.VRMParser.Tests.csproj" />
   </Folder>
