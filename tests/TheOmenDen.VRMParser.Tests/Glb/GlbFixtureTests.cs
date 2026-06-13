@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DotNext;
 using Shouldly;
 using TheOmenDen.VRMParser.Glb;
 using TheOmenDen.VRMParser.Models.Records;
@@ -23,7 +24,7 @@ public sealed class GlbFixtureTests
     {
         byte[] original = Load(name);
 
-        GlbDocument document = GlbDocument.Parse(original);
+        GlbDocument document = GlbDocument.Parse(original).Value;
 
         document.Version.ShouldBe(GlbDocument.SupportedVersion);
         document.ToBytes().ShouldBe(original);
@@ -34,7 +35,7 @@ public sealed class GlbFixtureTests
     [Test]
     public async Task Box_HasBinaryChunk_AndBindsToTypedModel()
     {
-        GlbDocument document = GlbDocument.Parse(Load("Box.glb"));
+        GlbDocument document = GlbDocument.Parse(Load("Box.glb")).Value;
 
         document.HasBinary.ShouldBeTrue();
 
@@ -48,7 +49,7 @@ public sealed class GlbFixtureTests
     [Test]
     public async Task Vrm1_DeclaresVrmcVrmExtensionWithRequiredMetadata()
     {
-        GlbDocument document = GlbDocument.Parse(Load("MinimalVrm1.vrm"));
+        GlbDocument document = GlbDocument.Parse(Load("MinimalVrm1.vrm")).Value;
 
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
@@ -67,7 +68,7 @@ public sealed class GlbFixtureTests
     [Test]
     public async Task Vrm0_DeclaresVrmExtension()
     {
-        GlbDocument document = GlbDocument.Parse(Load("MinimalVrm0.vrm"));
+        GlbDocument document = GlbDocument.Parse(Load("MinimalVrm0.vrm")).Value;
 
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
@@ -83,15 +84,15 @@ public sealed class GlbFixtureTests
     }
 
     [Test]
-    public async Task TryParse_SucceedsForEveryFixture()
+    public async Task Parse_SucceedsForEveryFixture()
     {
         foreach (string name in new[] { "Box.glb", "MinimalVrm0.vrm", "MinimalVrm1.vrm" })
         {
-            bool parsed = GlbDocument.TryParse(Load(name), out GlbDocument? document);
+            Result<GlbDocument> result = GlbDocument.Parse(Load(name));
 
-            parsed.ShouldBeTrue();
-            document.ShouldNotBeNull();
-            await Assert.That(parsed).IsTrue();
+            result.IsSuccessful.ShouldBeTrue();
+            result.ErrorCode().ShouldBe(GlbErrorCode.None);
+            await Assert.That(result.IsSuccessful).IsTrue();
         }
     }
 }

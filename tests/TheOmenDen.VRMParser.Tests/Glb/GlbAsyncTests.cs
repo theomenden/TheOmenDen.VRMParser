@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using Bogus;
+using DotNext;
 using Shouldly;
 using TheOmenDen.VRMParser.Glb;
 
@@ -23,10 +24,10 @@ public sealed class GlbAsyncTests
     {
         byte[] original = await File.ReadAllBytesAsync(FixturePath(name));
 
-        GlbDocument sync = GlbDocument.Parse(original);
+        GlbDocument sync = GlbDocument.Parse(original).Value;
 
         await using var stream = new MemoryStream(original, writable: false);
-        GlbDocument streamed = await GlbDocument.ParseAsync(stream);
+        GlbDocument streamed = (await GlbDocument.ParseAsync(stream)).Value;
 
         streamed.Version.ShouldBe(sync.Version);
         streamed.Json.ToArray().ShouldBe(sync.Json.ToArray());
@@ -44,7 +45,7 @@ public sealed class GlbAsyncTests
         byte[] original = await File.ReadAllBytesAsync(FixturePath(name));
 
         await using var source = new MemoryStream(original, writable: false);
-        GlbDocument document = await GlbDocument.ParseAsync(source);
+        GlbDocument document = (await GlbDocument.ParseAsync(source)).Value;
 
         await using var destination = new MemoryStream();
         await document.WriteToAsync(destination);
@@ -66,7 +67,7 @@ public sealed class GlbAsyncTests
     {
         byte[] binary = new Faker { Random = new Randomizer(length + 1) }.Random.Bytes(length);
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, binary);
-        GlbDocument document = GlbDocument.Parse(glb);
+        GlbDocument document = GlbDocument.Parse(glb).Value;
 
         await using var destination = new MemoryStream();
         await document.WriteToAsync(destination);
@@ -81,7 +82,7 @@ public sealed class GlbAsyncTests
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
 
         await using var stream = new MemoryStream(glb, writable: false);
-        GlbDocument document = await GlbDocument.ParseAsync(stream);
+        GlbDocument document = (await GlbDocument.ParseAsync(stream)).Value;
 
         document.Version.ShouldBe(GlbDocument.SupportedVersion);
         document.HasBinary.ShouldBeFalse();
@@ -90,51 +91,71 @@ public sealed class GlbAsyncTests
     }
 
     [Test]
-    public async Task ParseAsync_TooShortForHeader_Throws()
+    public async Task ParseAsync_TooShortForHeader_ReturnsFailure()
     {
         await using var stream = new MemoryStream([0x67, 0x6C, 0x54]); // 3 bytes
-        await Should.ThrowAsync<GlbFormatException>(async () => await GlbDocument.ParseAsync(stream));
+
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        result.IsSuccessful.ShouldBeFalse();
+        result.ErrorCode().ShouldBe(GlbErrorCode.TooShort);
     }
 
     [Test]
-    public async Task ParseAsync_BadMagic_Throws()
+    public async Task ParseAsync_BadMagic_ReturnsFailure()
     {
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         BinaryPrimitives.WriteUInt32LittleEndian(glb, 0xDEADBEEF);
 
         await using var stream = new MemoryStream(glb, writable: false);
-        await Should.ThrowAsync<GlbFormatException>(async () => await GlbDocument.ParseAsync(stream));
+
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        result.IsSuccessful.ShouldBeFalse();
+        result.ErrorCode().ShouldBe(GlbErrorCode.BadMagic);
     }
 
     [Test]
-    public async Task ParseAsync_UnsupportedVersion_Throws()
+    public async Task ParseAsync_UnsupportedVersion_ReturnsFailure()
     {
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(4), 1);
 
         await using var stream = new MemoryStream(glb, writable: false);
-        await Should.ThrowAsync<GlbFormatException>(async () => await GlbDocument.ParseAsync(stream));
+
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        result.IsSuccessful.ShouldBeFalse();
+        result.ErrorCode().ShouldBe(GlbErrorCode.UnsupportedVersion);
     }
 
     [Test]
-    public async Task ParseAsync_TruncatedChunkPayload_Throws()
+    public async Task ParseAsync_TruncatedChunkPayload_ReturnsFailure()
     {
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, [1, 2, 3, 4]);
         // Drop the trailing BIN payload bytes while leaving the header's declared length unchanged.
         byte[] truncated = glb[..^4];
 
         await using var stream = new MemoryStream(truncated, writable: false);
-        await Should.ThrowAsync<GlbFormatException>(async () => await GlbDocument.ParseAsync(stream));
+
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        result.IsSuccessful.ShouldBeFalse();
+        result.ErrorCode().ShouldBe(GlbErrorCode.ChunkPayloadTruncated);
     }
 
     [Test]
-    public async Task ParseAsync_MisalignedChunkLength_Throws()
+    public async Task ParseAsync_MisalignedChunkLength_ReturnsFailure()
     {
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         // Corrupt the JSON chunk length (at offset 12) to a value that is not 4-byte aligned.
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(12), 7);
 
         await using var stream = new MemoryStream(glb, writable: false);
-        await Should.ThrowAsync<GlbFormatException>(async () => await GlbDocument.ParseAsync(stream));
+
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        result.IsSuccessful.ShouldBeFalse();
+        result.ErrorCode().ShouldBe(GlbErrorCode.ChunkUnaligned);
     }
 }
