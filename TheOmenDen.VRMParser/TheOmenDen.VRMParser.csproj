@@ -13,6 +13,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- The generated glTF model is internal; the test project exercises the typed bridge directly. -->
+		<InternalsVisibleTo Include="TheOmenDen.VRMParser.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Remove="JsonSchemas\accessor.schema.json" />
 		<None Remove="JsonSchemas\accessor.sparse.indices.schema.json" />
 		<None Remove="JsonSchemas\accessor.sparse.schema.json" />
