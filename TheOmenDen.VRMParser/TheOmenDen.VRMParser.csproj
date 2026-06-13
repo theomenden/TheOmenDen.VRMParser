@@ -194,22 +194,24 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Corvus.Text.Json" Version="5.1.16" />
-		<PackageReference Include="Corvus.Text.Json.CodeGeneration" Version="5.1.16" />
-		<PackageReference Include="Corvus.Text.Json.SourceGenerator" Version="5.1.16">
+		<PackageReference Include="Corvus.Text.Json" />
+		<PackageReference Include="Corvus.Text.Json.CodeGeneration" />
+		<PackageReference Include="Corvus.Text.Json.SourceGenerator">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
-		<PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
+		<PackageReference Include="DotNext" />
+		<PackageReference Include="DotNext.IO" />
+		<PackageReference Include="Microsoft.Extensions.Logging" />
+		<PackageReference Include="Roslynator.Analyzers">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0">
+		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="SonarAnalyzer.CSharp" Version="10.27.0.140913">
+		<PackageReference Include="SonarAnalyzer.CSharp">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

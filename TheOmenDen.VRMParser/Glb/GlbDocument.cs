@@ -1,6 +1,8 @@
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using Corvus.Text.Json;
+using DotNext.IO;
 using TheOmenDen.VRMParser.Models.Records;
 
 namespace TheOmenDen.VRMParser.Glb;
@@ -194,6 +196,153 @@ public sealed class GlbDocument
         }
     }
 
+    /// <summary>
+    /// Asynchronously parses a GLB (<c>.glb</c> / <c>.vrm</c>) container by streaming it from
+    /// <paramref name="source"/>, reading only as far as the header's declared length.
+    /// </summary>
+    /// <param name="source">The stream positioned at the start of the GLB container.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns>The parsed <see cref="GlbDocument"/>.</returns>
+    /// <remarks>
+    /// Unlike <see cref="Parse(ReadOnlyMemory{byte})"/> this never buffers the whole file up front; it
+    /// reads the 12-byte header, then each chunk header and payload in turn. Chunk payloads are copied
+    /// into owned arrays, so the returned document follows the same (non-pooled) ownership model as the
+    /// synchronous path.
+    /// </remarks>
+    /// <exception cref="GlbFormatException">The stream does not contain a valid GLB container.</exception>
+    public static async ValueTask<GlbDocument> ParseAsync(Stream source, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        // A small scratch buffer backs the reader's little-endian integer reads; chunk payloads are
+        // read straight into their own arrays and never touch it.
+        byte[] scratch = ArrayPool<byte>.Shared.Rent(ChunkHeaderSize);
+        try
+        {
+            IAsyncBinaryReader reader = IAsyncBinaryReader.Create(source, scratch.AsMemory(0, ChunkHeaderSize));
+
+            uint magic, version, declaredLength;
+            try
+            {
+                magic = await reader.ReadLittleEndianAsync<uint>(cancellationToken).ConfigureAwait(false);
+                version = await reader.ReadLittleEndianAsync<uint>(cancellationToken).ConfigureAwait(false);
+                declaredLength = await reader.ReadLittleEndianAsync<uint>(cancellationToken).ConfigureAwait(false);
+            }
+            catch (EndOfStreamException ex)
+            {
+                throw new GlbFormatException(
+                    $"GLB data is too short: need at least {HeaderSize} bytes for the header.", ex);
+            }
+
+            if (magic != Magic)
+            {
+                throw new GlbFormatException(
+                    $"Not a GLB container: magic 0x{magic:X8} does not match 0x{Magic:X8} (\"glTF\").");
+            }
+
+            if (version != SupportedVersion)
+            {
+                throw new GlbFormatException(
+                    $"Unsupported GLB version {version}; only version {SupportedVersion} is supported.");
+            }
+
+            if (declaredLength < HeaderSize)
+            {
+                throw new GlbFormatException(
+                    $"GLB declared length {declaredLength} is smaller than the {HeaderSize}-byte header.");
+            }
+
+            ReadOnlyMemory<byte> json = default;
+            bool jsonSeen = false;
+            ReadOnlyMemory<byte>? binary = null;
+
+            long offset = HeaderSize;
+            long end = declaredLength;
+            int chunkIndex = 0;
+
+            while (offset < end)
+            {
+                if (end - offset < ChunkHeaderSize)
+                {
+                    throw new GlbFormatException(
+                        $"GLB is truncated: the chunk header at offset {offset} needs {ChunkHeaderSize} bytes, {end - offset} remain.");
+                }
+
+                uint chunkLength, chunkType;
+                try
+                {
+                    chunkLength = await reader.ReadLittleEndianAsync<uint>(cancellationToken).ConfigureAwait(false);
+                    chunkType = await reader.ReadLittleEndianAsync<uint>(cancellationToken).ConfigureAwait(false);
+                }
+                catch (EndOfStreamException ex)
+                {
+                    throw new GlbFormatException(
+                        $"GLB is truncated: the chunk header at offset {offset} could not be read.", ex);
+                }
+
+                offset += ChunkHeaderSize;
+
+                if (chunkLength % 4 != 0)
+                {
+                    throw new GlbFormatException(
+                        $"GLB chunk {chunkIndex} has length {chunkLength}, which is not 4-byte aligned.");
+                }
+
+                if (chunkLength > (uint)(end - offset))
+                {
+                    throw new GlbFormatException(
+                        $"GLB chunk {chunkIndex} declares {chunkLength} bytes but only {end - offset} remain.");
+                }
+
+                if (chunkIndex == 0 && chunkType != JsonChunkType)
+                {
+                    throw new GlbFormatException(
+                        $"The first GLB chunk must be JSON (0x{JsonChunkType:X8}) but was 0x{chunkType:X8}.");
+                }
+
+                // Copy the payload into an owned array — the document holds non-owned memory.
+                byte[] payload = new byte[(int)chunkLength];
+                try
+                {
+                    await reader.ReadAsync(payload, cancellationToken).ConfigureAwait(false);
+                }
+                catch (EndOfStreamException ex)
+                {
+                    throw new GlbFormatException(
+                        $"GLB is truncated: chunk {chunkIndex} declares {chunkLength} bytes but the stream ended early.", ex);
+                }
+
+                switch (chunkType)
+                {
+                    case JsonChunkType when !jsonSeen:
+                        json = payload;
+                        jsonSeen = true;
+                        break;
+                    case BinaryChunkType when binary is null:
+                        binary = payload;
+                        break;
+                    default:
+                        // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
+                        break;
+                }
+
+                offset += chunkLength;
+                chunkIndex++;
+            }
+
+            if (!jsonSeen)
+            {
+                throw new GlbFormatException("GLB contains no JSON chunk.");
+            }
+
+            return new GlbDocument(json, binary, version);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(scratch);
+        }
+    }
+
     /// <summary>Serializes this container to a new GLB byte array, padding each chunk to a 4-byte boundary.</summary>
     /// <returns>The complete GLB file contents.</returns>
     public byte[] ToBytes()
@@ -219,6 +368,77 @@ public sealed class GlbDocument
     {
         ArgumentNullException.ThrowIfNull(destination);
         destination.Write(ToBytes());
+    }
+
+    /// <summary>Asynchronously serializes this container to the given stream as GLB.</summary>
+    /// <param name="destination">The stream to write to.</param>
+    /// <param name="cancellationToken">A token to cancel the write.</param>
+    /// <remarks>
+    /// Unlike <see cref="WriteTo(Stream)"/> (which materializes the whole file via <see cref="ToBytes"/>
+    /// first) this streams the header and each chunk directly to <paramref name="destination"/>, writing
+    /// the <see cref="Json"/> and <see cref="Binary"/> payloads without an intermediate full-file copy.
+    /// </remarks>
+    public async ValueTask WriteToAsync(Stream destination, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        int jsonChunk = Align4(Json.Length);
+        int total = HeaderSize + ChunkHeaderSize + jsonChunk;
+
+        int binaryChunk = 0;
+        if (Binary is { } bin)
+        {
+            binaryChunk = Align4(bin.Length);
+            total += ChunkHeaderSize + binaryChunk;
+        }
+
+        byte[] scratch = ArrayPool<byte>.Shared.Rent(ChunkHeaderSize);
+        try
+        {
+            IAsyncBinaryWriter writer = IAsyncBinaryWriter.Create(destination, scratch.AsMemory(0, ChunkHeaderSize));
+
+            await writer.WriteLittleEndianAsync<uint>(Magic, cancellationToken).ConfigureAwait(false);
+            await writer.WriteLittleEndianAsync<uint>(Version, cancellationToken).ConfigureAwait(false);
+            await writer.WriteLittleEndianAsync<uint>((uint)total, cancellationToken).ConfigureAwait(false);
+
+            await writer.WriteLittleEndianAsync<uint>((uint)jsonChunk, cancellationToken).ConfigureAwait(false);
+            await writer.WriteLittleEndianAsync<uint>(JsonChunkType, cancellationToken).ConfigureAwait(false);
+            await writer.WriteAsync(Json, null, cancellationToken).ConfigureAwait(false);
+            // JSON chunks pad with spaces (0x20); BIN chunks pad with zeros.
+            await WritePaddingAsync(writer, jsonChunk - Json.Length, (byte)' ', cancellationToken).ConfigureAwait(false);
+
+            if (Binary is { } binary)
+            {
+                await writer.WriteLittleEndianAsync<uint>((uint)binaryChunk, cancellationToken).ConfigureAwait(false);
+                await writer.WriteLittleEndianAsync<uint>(BinaryChunkType, cancellationToken).ConfigureAwait(false);
+                await writer.WriteAsync(binary, null, cancellationToken).ConfigureAwait(false);
+                await WritePaddingAsync(writer, binaryChunk - binary.Length, 0x00, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(scratch);
+        }
+    }
+
+    private static async ValueTask WritePaddingAsync(
+        IAsyncBinaryWriter writer, int count, byte value, CancellationToken cancellationToken)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        byte[] padding = ArrayPool<byte>.Shared.Rent(count);
+        try
+        {
+            Array.Fill(padding, value, 0, count);
+            await writer.WriteAsync(padding.AsMemory(0, count), null, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(padding);
+        }
     }
 
     /// <summary>
