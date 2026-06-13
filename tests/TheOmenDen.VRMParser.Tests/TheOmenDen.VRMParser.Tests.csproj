@@ -9,10 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TUnit" Version="1.5*" />
-    <PackageReference Include="TUnit.Mocks" Version="1.54.0" />
-    <PackageReference Include="Shouldly" Version="4.3.0" />
-    <PackageReference Include="Bogus" Version="35.6.5" />
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="TUnit.Mocks" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Bogus" />
   </ItemGroup>
 
   <ItemGroup>

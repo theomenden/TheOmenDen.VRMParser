@@ -1,0 +1,34 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- TUnit is pinned to a floating 1.5* version; CPM requires opting into floating versions. -->
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Model generation -->
+    <PackageVersion Include="Corvus.Text.Json" Version="5.1.16" />
+    <PackageVersion Include="Corvus.Text.Json.CodeGeneration" Version="5.1.16" />
+    <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.1.16" />
+
+    <!-- Logging -->
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+
+    <!-- High-performance processing / binary IO -->
+    <PackageVersion Include="DotNext" Version="6.3.0" />
+    <PackageVersion Include="DotNext.IO" Version="6.3.0" />
+
+    <!-- Analyzers -->
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
+
+    <!-- Testing -->
+    <PackageVersion Include="TUnit" Version="1.5*" />
+    <PackageVersion Include="TUnit.Mocks" Version="1.53.0" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="Bogus" Version="35.6.5" />
+  </ItemGroup>
+
+</Project>
