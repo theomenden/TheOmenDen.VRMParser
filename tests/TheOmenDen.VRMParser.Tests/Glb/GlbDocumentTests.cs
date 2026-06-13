@@ -8,7 +8,7 @@ using TheOmenDen.VRMParser.Models.Records;
 
 namespace TheOmenDen.VRMParser.Tests.Glb;
 
-public sealed class GlbDocumentTests
+public sealed partial class GlbDocumentTests
 {
     // Cover lengths on, just below, and just above 4-byte boundaries so chunk padding is exercised.
     [Test]
@@ -21,14 +21,16 @@ public sealed class GlbDocumentTests
     [Arguments(16)]
     [Arguments(255)]
     [Arguments(1024)]
-    public void RoundTrip_PreservesRandomBinaryPayload(int length)
+    public void Parse_ShouldRoundTripBinaryPayloadByteForByte_WhenLengthVaries(int length)
     {
-        // Deterministic seed keeps the test reproducible run-to-run.
+        // Arrange — deterministic seed keeps the test reproducible run-to-run.
         byte[] binary = new Faker { Random = new Randomizer(length + 1) }.Random.Bytes(length);
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, binary);
 
+        // Act
         GlbDocument document = GlbDocument.Parse(glb).Value;
 
+        // Assert
         document.ShouldSatisfyAllConditions(
             () => document.HasBinary.ShouldBeTrue(),
             () => document.Binary.Value.Span[..length].ToArray().ShouldBe(binary),
@@ -38,12 +40,15 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_MinimalJsonOnly_ExposesVersionAndJson()
+    public void Parse_ShouldExposeVersionAndJson_WhenContainerIsJsonOnly()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeTrue();
         GlbDocument document = result.Value;
         document.ShouldSatisfyAllConditions(
@@ -56,13 +61,16 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_WithBinaryChunk_ExposesBinaryPayload()
+    public void Parse_ShouldExposeBinaryPayload_WhenContainerHasBinaryChunk()
     {
+        // Arrange
         byte[] binary = [1, 2, 3, 4, 5];
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, binary);
 
+        // Act
         GlbDocument document = GlbDocument.Parse(glb).Value;
 
+        // Assert
         document.ShouldSatisfyAllConditions(
             () => document.HasBinary.ShouldBeTrue(),
             // Payload is padded to 8 bytes (5 -> 8); the leading bytes are the data, the rest zero padding.
@@ -70,25 +78,31 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void ToBytes_IsByteIdenticalForCompliantInput()
+    public void ToBytes_ShouldBeByteIdentical_WhenInputIsCompliant()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, [9, 8, 7, 6]);
 
+        // Act
         byte[] roundTripped = GlbDocument.Parse(glb).Value.ToBytes();
 
+        // Assert
         roundTripped.ShouldSatisfyAllConditions(
             () => roundTripped.ShouldBe(glb),
             () => roundTripped.Length.ShouldBe(glb.Length));
     }
 
     [Test]
-    public void ParseToBytesParse_IsStable()
+    public void ParseToBytesParse_ShouldProduceStableModel_WhenReparsed()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, [42, 42, 42]);
 
+        // Act
         GlbDocument first = GlbDocument.Parse(glb).Value;
         GlbDocument second = GlbDocument.Parse(first.ToBytes()).Value;
 
+        // Assert
         second.ShouldSatisfyAllConditions(
             () => second.Version.ShouldBe(first.Version),
             () => second.Json.ToArray().ShouldBe(first.Json.ToArray()),
@@ -97,36 +111,42 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void ConstructThenWrite_PadsAndRoundTrips()
+    public void ToBytes_ShouldPadAndRoundTrip_WhenConstructedFromUnpaddedJson()
     {
-        // Construct from unpadded JSON (27 bytes, not 4-aligned) and assert it reads back cleanly.
+        // Arrange — construct from unpadded JSON (27 bytes, not 4-aligned).
         var document = new GlbDocument(Encoding.UTF8.GetBytes(GlbTestData.MinimalGltfJson));
 
+        // Act
         GlbDocument reparsed = GlbDocument.Parse(document.ToBytes()).Value;
 
+        // Assert
         reparsed.ShouldSatisfyAllConditions(
             () => Encoding.UTF8.GetString(reparsed.Json.Span).TrimEnd().ShouldBe(GlbTestData.MinimalGltfJson),
             () => reparsed.HasBinary.ShouldBeFalse());
     }
 
     [Test]
-    public void ParseGltf_BindsToTypedGltfRoot()
+    public void ParseGltf_ShouldBindToTypedGltfRoot_WhenJsonIsValid()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         GlbDocument document = GlbDocument.Parse(glb).Value;
 
+        // Act
         using var parsed = document.ParseGltf();
         GltfRoot root = parsed.RootElement;
 
-        // Read through the strongly-typed Corvus model the bridge exposes.
+        // Assert — read through the strongly-typed Corvus model the bridge exposes.
         root.Asset.Version.GetString().ShouldBe("2.0");
     }
 
     [Test]
-    public void Parse_Garbage_ReturnsFailureWithoutThrowing()
+    public void Parse_ShouldReturnFailureWithoutThrowing_WhenDataIsGarbage()
     {
+        // Arrange & Act
         Result<GlbDocument> result = GlbDocument.Parse(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 });
 
+        // Assert
         result.ShouldSatisfyAllConditions(
             () => result.IsSuccessful.ShouldBeFalse(),
             // 12 bytes clears the header-length check, so the magic mismatch is what fails it.
@@ -134,10 +154,12 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_TooShort_ReturnsFailure()
+    public void Parse_ShouldReturnTooShortError_WhenDataShorterThanHeader()
     {
+        // Arrange & Act
         Result<GlbDocument> result = GlbDocument.Parse(new byte[] { 0x67, 0x6C, 0x54 });
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
@@ -147,13 +169,16 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_BadMagic_ReturnsFailure()
+    public void Parse_ShouldReturnBadMagicError_WhenMagicIsWrong()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         glb[0] ^= 0xFF; // corrupt the magic
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
@@ -163,12 +188,15 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_UnsupportedVersion_ReturnsFailure()
+    public void Parse_ShouldReturnUnsupportedVersionError_WhenVersionIsNotTwo()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, version: 1);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
@@ -178,14 +206,16 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_FirstChunkNotJson_ReturnsFailure()
+    public void Parse_ShouldReturnFirstChunkNotJsonError_WhenFirstChunkIsNotJson()
     {
+        // Arrange — overwrite the first chunk's type (at offset 16) with the BIN type.
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        // Overwrite the first chunk's type (at offset 16) with the BIN type.
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(16), GlbDocument.BinaryChunkType);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
@@ -195,30 +225,34 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_ChunkLengthOverrunsBuffer_ReturnsFailure()
+    public void Parse_ShouldReturnChunkOverrunError_WhenChunkLengthExceedsBuffer()
     {
+        // Arrange — inflate the JSON chunk length (at offset 12) past the end of the buffer, kept
+        // 4-aligned so the overrun check — not the alignment check — is what fails.
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        // Inflate the JSON chunk length (at offset 12) past the end of the buffer, kept 4-aligned so the
-        // overrun check — not the alignment check — is what fails.
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(12), 0xFFFCu);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.ShouldSatisfyAllConditions(
             () => result.IsSuccessful.ShouldBeFalse(),
             () => result.ErrorCode().ShouldBe(GlbErrorCode.ChunkOverrun));
     }
 
     [Test]
-    public void Parse_UnalignedChunkLength_ReturnsFailure()
+    public void Parse_ShouldReturnChunkUnalignedError_WhenChunkLengthNotFourByteAligned()
     {
+        // Arrange — 4-aligned JSON chunk length minus 1 => not a multiple of 4.
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        // 4-aligned JSON chunk length minus 1 => not a multiple of 4.
         uint current = BinaryPrimitives.ReadUInt32LittleEndian(glb.AsSpan(12));
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(12), current - 1);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
@@ -228,13 +262,16 @@ public sealed class GlbDocumentTests
     }
 
     [Test]
-    public void Parse_DeclaredLengthExceedsActual_ReturnsFailure()
+    public void Parse_ShouldReturnDeclaredLengthExceedsDataError_WhenHeaderLengthExceedsActual()
     {
+        // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
         BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(8), (uint)glb.Length + 16);
 
+        // Act
         Result<GlbDocument> result = GlbDocument.Parse(glb);
 
+        // Assert
         result.IsSuccessful.ShouldBeFalse();
         GlbFormatException error = result.Error.ShouldBeOfType<GlbFormatException>();
         error.ShouldSatisfyAllConditions(
