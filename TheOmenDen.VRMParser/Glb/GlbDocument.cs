@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using Corvus.Text.Json;
+using DotNext;
 using DotNext.IO;
 using TheOmenDen.VRMParser.Models.Records;
 
@@ -43,9 +43,9 @@ public sealed class GlbDocument
 
     /// <summary>Initializes a new <see cref="GlbDocument"/> from chunk payloads.</summary>
     /// <param name="json">The glTF JSON chunk payload (UTF-8). Trailing padding is optional; it is added on write.</param>
-    /// <param name="binary">The binary buffer chunk payload, or <see langword="null"/> when the container has no <c>BIN</c> chunk.</param>
+    /// <param name="binary">The binary buffer chunk payload, or an empty <see cref="Optional{T}"/> (the default) when the container has no <c>BIN</c> chunk. A present-but-empty payload is distinct from absence and is preserved on write.</param>
     /// <param name="version">The GLB container version. Defaults to <see cref="SupportedVersion"/>.</param>
-    public GlbDocument(ReadOnlyMemory<byte> json, ReadOnlyMemory<byte>? binary = null, uint version = SupportedVersion)
+    public GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemory<byte>> binary = default, uint version = SupportedVersion)
     {
         Json = json;
         Binary = binary;
@@ -62,59 +62,59 @@ public sealed class GlbDocument
     public ReadOnlyMemory<byte> Json { get; }
 
     /// <summary>
-    /// Gets the binary buffer (<c>BIN</c>) chunk payload, or <see langword="null"/> when the container
-    /// has no binary chunk. May include trailing <c>0x00</c> padding when read from an aligned container.
+    /// Gets the binary buffer (<c>BIN</c>) chunk payload, or an empty <see cref="Optional{T}"/> when the
+    /// container has no binary chunk. A present chunk and an absent one are distinct even when the
+    /// payload is empty, which keeps a parse → write cycle byte-stable. May include trailing <c>0x00</c>
+    /// padding when read from an aligned container.
     /// </summary>
-    public ReadOnlyMemory<byte>? Binary { get; }
+    public Optional<ReadOnlyMemory<byte>> Binary { get; }
 
     /// <summary>Gets a value indicating whether this container has a binary (<c>BIN</c>) chunk.</summary>
-    [MemberNotNullWhen(true, nameof(Binary))]
-    public bool HasBinary => Binary is not null;
+    public bool HasBinary => Binary.HasValue;
 
     /// <summary>Parses a GLB (<c>.glb</c> / <c>.vrm</c>) container from its bytes.</summary>
     /// <param name="data">The complete GLB file contents.</param>
-    /// <returns>The parsed <see cref="GlbDocument"/>.</returns>
-    /// <exception cref="GlbFormatException">The data is not a valid GLB container.</exception>
-    public static GlbDocument Parse(ReadOnlyMemory<byte> data)
+    /// <returns>
+    /// A successful <see cref="Result{T}"/> wrapping the parsed <see cref="GlbDocument"/>, or a failed
+    /// result whose error is a <see cref="GlbFormatException"/> describing the malformation. Nothing is
+    /// thrown for malformed data; read <see cref="Result{T}.Value"/> to (re)throw, or inspect
+    /// <see cref="GlbResultExtensions.ErrorCode"/> to branch on the <see cref="GlbErrorCode"/>.
+    /// </returns>
+    public static Result<GlbDocument> Parse(ReadOnlyMemory<byte> data)
     {
         ReadOnlySpan<byte> span = data.Span;
 
         if (span.Length < HeaderSize)
         {
-            throw new GlbFormatException(
-                $"GLB data is too short: {span.Length} bytes, need at least {HeaderSize} for the header.");
+            return new(GlbFormatException.TooShort(span.Length, HeaderSize));
         }
 
         uint magic = BinaryPrimitives.ReadUInt32LittleEndian(span);
         if (magic != Magic)
         {
-            throw new GlbFormatException(
-                $"Not a GLB container: magic 0x{magic:X8} does not match 0x{Magic:X8} (\"glTF\").");
+            return new(GlbFormatException.BadMagic(magic));
         }
 
         uint version = BinaryPrimitives.ReadUInt32LittleEndian(span[4..]);
         if (version != SupportedVersion)
         {
-            throw new GlbFormatException(
-                $"Unsupported GLB version {version}; only version {SupportedVersion} is supported.");
+            return new(GlbFormatException.UnsupportedVersion(version));
         }
 
         uint declaredLength = BinaryPrimitives.ReadUInt32LittleEndian(span[8..]);
         if (declaredLength < HeaderSize)
         {
-            throw new GlbFormatException(
-                $"GLB declared length {declaredLength} is smaller than the {HeaderSize}-byte header.");
+            return new(GlbFormatException.DeclaredLengthTooSmall(declaredLength, HeaderSize));
         }
 
         if (declaredLength > (uint)span.Length)
         {
-            throw new GlbFormatException(
-                $"GLB is truncated: the header declares {declaredLength} bytes but only {span.Length} are present.");
+            return new(GlbFormatException.DeclaredLengthExceedsData(declaredLength, span.Length));
         }
 
         ReadOnlyMemory<byte> json = default;
         bool jsonSeen = false;
-        ReadOnlyMemory<byte>? binary = null;
+        Optional<ReadOnlyMemory<byte>> binary = default;
 
         int offset = HeaderSize;
         int end = (int)declaredLength;
@@ -124,8 +124,7 @@ public sealed class GlbDocument
         {
             if (end - offset < ChunkHeaderSize)
             {
-                throw new GlbFormatException(
-                    $"GLB is truncated: the chunk header at offset {offset} needs {ChunkHeaderSize} bytes, {end - offset} remain.");
+                return new(GlbFormatException.ChunkHeaderTruncated(offset, end - offset, ChunkHeaderSize));
             }
 
             uint chunkLength = BinaryPrimitives.ReadUInt32LittleEndian(span[offset..]);
@@ -134,20 +133,17 @@ public sealed class GlbDocument
 
             if (chunkLength % 4 != 0)
             {
-                throw new GlbFormatException(
-                    $"GLB chunk {chunkIndex} has length {chunkLength}, which is not 4-byte aligned.");
+                return new(GlbFormatException.ChunkUnaligned(chunkIndex, chunkLength));
             }
 
             if (chunkLength > (uint)(end - offset))
             {
-                throw new GlbFormatException(
-                    $"GLB chunk {chunkIndex} declares {chunkLength} bytes but only {end - offset} remain.");
+                return new(GlbFormatException.ChunkOverrun(chunkIndex, chunkLength, end - offset));
             }
 
             if (chunkIndex == 0 && chunkType != JsonChunkType)
             {
-                throw new GlbFormatException(
-                    $"The first GLB chunk must be JSON (0x{JsonChunkType:X8}) but was 0x{chunkType:X8}.");
+                return new(GlbFormatException.FirstChunkNotJson(chunkType));
             }
 
             ReadOnlyMemory<byte> payload = data.Slice(offset, (int)chunkLength);
@@ -158,8 +154,8 @@ public sealed class GlbDocument
                     json = payload;
                     jsonSeen = true;
                     break;
-                case BinaryChunkType when binary is null:
-                    binary = payload;
+                case BinaryChunkType when !binary.HasValue:
+                    binary = (ReadOnlyMemory<byte>)payload;
                     break;
                 default:
                     // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
@@ -172,28 +168,10 @@ public sealed class GlbDocument
 
         if (!jsonSeen)
         {
-            throw new GlbFormatException("GLB contains no JSON chunk.");
+            return new(GlbFormatException.MissingJsonChunk());
         }
 
         return new GlbDocument(json, binary, version);
-    }
-
-    /// <summary>Attempts to parse a GLB container, returning <see langword="false"/> instead of throwing on malformed data.</summary>
-    /// <param name="data">The complete GLB file contents.</param>
-    /// <param name="document">On success, the parsed document; otherwise <see langword="null"/>.</param>
-    /// <returns><see langword="true"/> if <paramref name="data"/> is a valid GLB container.</returns>
-    public static bool TryParse(ReadOnlyMemory<byte> data, [NotNullWhen(true)] out GlbDocument? document)
-    {
-        try
-        {
-            document = Parse(data);
-            return true;
-        }
-        catch (GlbFormatException)
-        {
-            document = null;
-            return false;
-        }
     }
 
     /// <summary>
@@ -202,15 +180,19 @@ public sealed class GlbDocument
     /// </summary>
     /// <param name="source">The stream positioned at the start of the GLB container.</param>
     /// <param name="cancellationToken">A token to cancel the read.</param>
-    /// <returns>The parsed <see cref="GlbDocument"/>.</returns>
+    /// <returns>
+    /// A successful <see cref="Result{T}"/> wrapping the parsed <see cref="GlbDocument"/>, or a failed
+    /// result whose error is a <see cref="GlbFormatException"/> describing the malformation. Malformed
+    /// data does not throw; only a <see langword="null"/> <paramref name="source"/> does.
+    /// </returns>
     /// <remarks>
     /// Unlike <see cref="Parse(ReadOnlyMemory{byte})"/> this never buffers the whole file up front; it
     /// reads the 12-byte header, then each chunk header and payload in turn. Chunk payloads are copied
     /// into owned arrays, so the returned document follows the same (non-pooled) ownership model as the
     /// synchronous path.
     /// </remarks>
-    /// <exception cref="GlbFormatException">The stream does not contain a valid GLB container.</exception>
-    public static async ValueTask<GlbDocument> ParseAsync(Stream source, CancellationToken cancellationToken = default)
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static async ValueTask<Result<GlbDocument>> ParseAsync(Stream source, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -230,31 +212,27 @@ public sealed class GlbDocument
             }
             catch (EndOfStreamException ex)
             {
-                throw new GlbFormatException(
-                    $"GLB data is too short: need at least {HeaderSize} bytes for the header.", ex);
+                return new(GlbFormatException.IncompleteHeader(HeaderSize, ex));
             }
 
             if (magic != Magic)
             {
-                throw new GlbFormatException(
-                    $"Not a GLB container: magic 0x{magic:X8} does not match 0x{Magic:X8} (\"glTF\").");
+                return new(GlbFormatException.BadMagic(magic));
             }
 
             if (version != SupportedVersion)
             {
-                throw new GlbFormatException(
-                    $"Unsupported GLB version {version}; only version {SupportedVersion} is supported.");
+                return new(GlbFormatException.UnsupportedVersion(version));
             }
 
             if (declaredLength < HeaderSize)
             {
-                throw new GlbFormatException(
-                    $"GLB declared length {declaredLength} is smaller than the {HeaderSize}-byte header.");
+                return new(GlbFormatException.DeclaredLengthTooSmall(declaredLength, HeaderSize));
             }
 
             ReadOnlyMemory<byte> json = default;
             bool jsonSeen = false;
-            ReadOnlyMemory<byte>? binary = null;
+            Optional<ReadOnlyMemory<byte>> binary = default;
 
             long offset = HeaderSize;
             long end = declaredLength;
@@ -264,8 +242,7 @@ public sealed class GlbDocument
             {
                 if (end - offset < ChunkHeaderSize)
                 {
-                    throw new GlbFormatException(
-                        $"GLB is truncated: the chunk header at offset {offset} needs {ChunkHeaderSize} bytes, {end - offset} remain.");
+                    return new(GlbFormatException.ChunkHeaderTruncated(offset, end - offset, ChunkHeaderSize));
                 }
 
                 uint chunkLength, chunkType;
@@ -276,28 +253,24 @@ public sealed class GlbDocument
                 }
                 catch (EndOfStreamException ex)
                 {
-                    throw new GlbFormatException(
-                        $"GLB is truncated: the chunk header at offset {offset} could not be read.", ex);
+                    return new(GlbFormatException.IncompleteChunkHeader(offset, ex));
                 }
 
                 offset += ChunkHeaderSize;
 
                 if (chunkLength % 4 != 0)
                 {
-                    throw new GlbFormatException(
-                        $"GLB chunk {chunkIndex} has length {chunkLength}, which is not 4-byte aligned.");
+                    return new(GlbFormatException.ChunkUnaligned(chunkIndex, chunkLength));
                 }
 
                 if (chunkLength > (uint)(end - offset))
                 {
-                    throw new GlbFormatException(
-                        $"GLB chunk {chunkIndex} declares {chunkLength} bytes but only {end - offset} remain.");
+                    return new(GlbFormatException.ChunkOverrun(chunkIndex, chunkLength, end - offset));
                 }
 
                 if (chunkIndex == 0 && chunkType != JsonChunkType)
                 {
-                    throw new GlbFormatException(
-                        $"The first GLB chunk must be JSON (0x{JsonChunkType:X8}) but was 0x{chunkType:X8}.");
+                    return new(GlbFormatException.FirstChunkNotJson(chunkType));
                 }
 
                 // Copy the payload into an owned array — the document holds non-owned memory.
@@ -308,8 +281,7 @@ public sealed class GlbDocument
                 }
                 catch (EndOfStreamException ex)
                 {
-                    throw new GlbFormatException(
-                        $"GLB is truncated: chunk {chunkIndex} declares {chunkLength} bytes but the stream ended early.", ex);
+                    return new(GlbFormatException.ChunkPayloadTruncated(chunkIndex, chunkLength, ex));
                 }
 
                 switch (chunkType)
@@ -318,8 +290,8 @@ public sealed class GlbDocument
                         json = payload;
                         jsonSeen = true;
                         break;
-                    case BinaryChunkType when binary is null:
-                        binary = payload;
+                    case BinaryChunkType when !binary.HasValue:
+                        binary = (ReadOnlyMemory<byte>)payload;
                         break;
                     default:
                         // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
@@ -332,7 +304,7 @@ public sealed class GlbDocument
 
             if (!jsonSeen)
             {
-                throw new GlbFormatException("GLB contains no JSON chunk.");
+                return new(GlbFormatException.MissingJsonChunk());
             }
 
             return new GlbDocument(json, binary, version);
@@ -351,7 +323,7 @@ public sealed class GlbDocument
         int total = HeaderSize + ChunkHeaderSize + jsonChunk;
 
         int binaryChunk = 0;
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             binaryChunk = Align4(bin.Length);
             total += ChunkHeaderSize + binaryChunk;
@@ -386,7 +358,7 @@ public sealed class GlbDocument
         int total = HeaderSize + ChunkHeaderSize + jsonChunk;
 
         int binaryChunk = 0;
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             binaryChunk = Align4(bin.Length);
             total += ChunkHeaderSize + binaryChunk;
@@ -407,7 +379,7 @@ public sealed class GlbDocument
             // JSON chunks pad with spaces (0x20); BIN chunks pad with zeros.
             await WritePaddingAsync(writer, jsonChunk - Json.Length, (byte)' ', cancellationToken).ConfigureAwait(false);
 
-            if (Binary is { } binary)
+            if (Binary.TryGet(out var binary))
             {
                 await writer.WriteLittleEndianAsync<uint>((uint)binaryChunk, cancellationToken).ConfigureAwait(false);
                 await writer.WriteLittleEndianAsync<uint>(BinaryChunkType, cancellationToken).ConfigureAwait(false);
@@ -466,7 +438,7 @@ public sealed class GlbDocument
         span[(offset + Json.Length)..(offset + jsonChunk)].Fill((byte)' ');
         offset += jsonChunk;
 
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             BinaryPrimitives.WriteUInt32LittleEndian(span[offset..], (uint)binaryChunk);
             BinaryPrimitives.WriteUInt32LittleEndian(span[(offset + 4)..], BinaryChunkType);
