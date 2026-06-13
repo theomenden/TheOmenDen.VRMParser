@@ -20,79 +20,76 @@ public sealed class GlbFixtureTests
     [Arguments("Box.glb")]
     [Arguments("MinimalVrm0.vrm")]
     [Arguments("MinimalVrm1.vrm")]
-    public async Task Fixture_ParsesAndRoundTripsByteForByte(string name)
+    public void Fixture_ParsesAndRoundTripsByteForByte(string name)
     {
         byte[] original = Load(name);
 
         GlbDocument document = GlbDocument.Parse(original).Value;
 
-        document.Version.ShouldBe(GlbDocument.SupportedVersion);
-        document.ToBytes().ShouldBe(original);
-
-        await Assert.That(document.Json.IsEmpty).IsFalse();
+        document.ShouldSatisfyAllConditions(
+            () => document.Version.ShouldBe(GlbDocument.SupportedVersion),
+            () => document.ToBytes().ShouldBe(original),
+            () => document.Json.IsEmpty.ShouldBeFalse());
     }
 
     [Test]
-    public async Task Box_HasBinaryChunk_AndBindsToTypedModel()
+    public void Box_HasBinaryChunk_AndBindsToTypedModel()
     {
         GlbDocument document = GlbDocument.Parse(Load("Box.glb")).Value;
 
-        document.HasBinary.ShouldBeTrue();
-
         using var parsed = document.ParseGltf();
         GltfRoot root = parsed.RootElement;
-        root.Asset.Version.GetString().ShouldBe("2.0");
 
-        await Assert.That(document.HasBinary).IsTrue();
+        document.ShouldSatisfyAllConditions(
+            () => document.HasBinary.ShouldBeTrue(),
+            () => root.Asset.Version.GetString().ShouldBe("2.0"));
     }
 
     [Test]
-    public async Task Vrm1_DeclaresVrmcVrmExtensionWithRequiredMetadata()
+    public void Vrm1_DeclaresVrmcVrmExtensionWithRequiredMetadata()
     {
         GlbDocument document = GlbDocument.Parse(Load("MinimalVrm1.vrm")).Value;
 
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
-
-        gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
-            .Select(e => e.GetString()).ShouldContain("VRMC_vrm");
-
         JsonElement vrm = gltf.GetProperty("extensions"u8).GetProperty("VRMC_vrm"u8);
-        vrm.GetProperty("specVersion"u8).GetString().ShouldBe("1.0");
-        vrm.GetProperty("meta"u8).GetProperty("name"u8).GetString().ShouldBe("TheOmenDen Test Avatar");
-        vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).EnumerateObject().Count().ShouldBe(15);
 
-        await Assert.That(document.HasBinary).IsTrue();
+        gltf.ShouldSatisfyAllConditions(
+            () => gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
+                .Select(e => e.GetString()).ShouldContain("VRMC_vrm"),
+            () => vrm.GetProperty("specVersion"u8).GetString().ShouldBe("1.0"),
+            () => vrm.GetProperty("meta"u8).GetProperty("name"u8).GetString().ShouldBe("TheOmenDen Test Avatar"),
+            () => vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).EnumerateObject().Count().ShouldBe(15),
+            () => document.HasBinary.ShouldBeTrue());
     }
 
     [Test]
-    public async Task Vrm0_DeclaresVrmExtension()
+    public void Vrm0_DeclaresVrmExtension()
     {
         GlbDocument document = GlbDocument.Parse(Load("MinimalVrm0.vrm")).Value;
 
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
-
-        gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
-            .Select(e => e.GetString()).ShouldContain("VRM");
-
         JsonElement vrm = gltf.GetProperty("extensions"u8).GetProperty("VRM"u8);
-        vrm.GetProperty("specVersion"u8).GetString().ShouldBe("0.0");
-        vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).GetArrayLength().ShouldBe(15);
 
-        await Assert.That(gltf.TryGetProperty("extensions"u8, out _)).IsTrue();
+        gltf.ShouldSatisfyAllConditions(
+            () => gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
+                .Select(e => e.GetString()).ShouldContain("VRM"),
+            () => vrm.GetProperty("specVersion"u8).GetString().ShouldBe("0.0"),
+            () => vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).GetArrayLength().ShouldBe(15),
+            () => gltf.TryGetProperty("extensions"u8, out _).ShouldBeTrue());
     }
 
     [Test]
-    public async Task Parse_SucceedsForEveryFixture()
+    public void Parse_SucceedsForEveryFixture()
     {
         foreach (string name in new[] { "Box.glb", "MinimalVrm0.vrm", "MinimalVrm1.vrm" })
         {
             Result<GlbDocument> result = GlbDocument.Parse(Load(name));
 
-            result.IsSuccessful.ShouldBeTrue();
-            result.ErrorCode().ShouldBe(GlbErrorCode.None);
-            await Assert.That(result.IsSuccessful).IsTrue();
+            result.ShouldSatisfyAllConditions(
+                () => result.IsSuccessful.ShouldBeTrue(),
+                () => result.ErrorCode().ShouldBe(GlbErrorCode.None));
         }
     }
 }

@@ -29,13 +29,17 @@ public sealed class GlbAsyncTests
         await using var stream = new MemoryStream(original, writable: false);
         GlbDocument streamed = (await GlbDocument.ParseAsync(stream)).Value;
 
-        streamed.Version.ShouldBe(sync.Version);
-        streamed.Json.ToArray().ShouldBe(sync.Json.ToArray());
-        streamed.HasBinary.ShouldBe(sync.HasBinary);
-        if (sync.HasBinary)
-        {
-            streamed.Binary.Value.ToArray().ShouldBe(sync.Binary.Value.ToArray());
-        }
+        streamed.ShouldSatisfyAllConditions(
+            () => streamed.Version.ShouldBe(sync.Version),
+            () => streamed.Json.ToArray().ShouldBe(sync.Json.ToArray()),
+            () => streamed.HasBinary.ShouldBe(sync.HasBinary),
+            () =>
+            {
+                if (sync.HasBinary)
+                {
+                    streamed.Binary.Value.ToArray().ShouldBe(sync.Binary.Value.ToArray());
+                }
+            });
     }
 
     // Streaming parse -> streaming write must round-trip every fixture byte-for-byte.
@@ -75,8 +79,9 @@ public sealed class GlbAsyncTests
         await using var destination = new MemoryStream();
         await document.WriteToAsync(destination);
 
-        destination.ToArray().ShouldBe(document.ToBytes());
-        destination.ToArray().ShouldBe(glb);
+        destination.ShouldSatisfyAllConditions(
+            () => destination.ToArray().ShouldBe(document.ToBytes()),
+            () => destination.ToArray().ShouldBe(glb));
     }
 
     [Test]
@@ -87,10 +92,11 @@ public sealed class GlbAsyncTests
         await using var stream = new MemoryStream(glb, writable: false);
         GlbDocument document = (await GlbDocument.ParseAsync(stream)).Value;
 
-        document.Version.ShouldBe(GlbDocument.SupportedVersion);
-        document.HasBinary.ShouldBeFalse();
-        document.Binary.HasValue.ShouldBeFalse();
-        await Assert.That(document.Json.IsEmpty).IsFalse();
+        document.ShouldSatisfyAllConditions(
+            () => document.Version.ShouldBe(GlbDocument.SupportedVersion),
+            () => document.HasBinary.ShouldBeFalse(),
+            () => document.Binary.HasValue.ShouldBeFalse(),
+            () => document.Json.IsEmpty.ShouldBeFalse());
     }
 
     [Test]
@@ -100,8 +106,9 @@ public sealed class GlbAsyncTests
 
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
-        result.IsSuccessful.ShouldBeFalse();
-        result.ErrorCode().ShouldBe(GlbErrorCode.TooShort);
+        result.ShouldSatisfyAllConditions(
+            () => result.IsSuccessful.ShouldBeFalse(),
+            () => result.ErrorCode().ShouldBe(GlbErrorCode.TooShort));
     }
 
     [Test]
@@ -114,8 +121,9 @@ public sealed class GlbAsyncTests
 
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
-        result.IsSuccessful.ShouldBeFalse();
-        result.ErrorCode().ShouldBe(GlbErrorCode.BadMagic);
+        result.ShouldSatisfyAllConditions(
+            () => result.IsSuccessful.ShouldBeFalse(),
+            () => result.ErrorCode().ShouldBe(GlbErrorCode.BadMagic));
     }
 
     [Test]
@@ -128,8 +136,9 @@ public sealed class GlbAsyncTests
 
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
-        result.IsSuccessful.ShouldBeFalse();
-        result.ErrorCode().ShouldBe(GlbErrorCode.UnsupportedVersion);
+        result.ShouldSatisfyAllConditions(
+            () => result.IsSuccessful.ShouldBeFalse(),
+            () => result.ErrorCode().ShouldBe(GlbErrorCode.UnsupportedVersion));
     }
 
     [Test]
@@ -143,8 +152,9 @@ public sealed class GlbAsyncTests
 
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
-        result.IsSuccessful.ShouldBeFalse();
-        result.ErrorCode().ShouldBe(GlbErrorCode.ChunkPayloadTruncated);
+        result.ShouldSatisfyAllConditions(
+            () => result.IsSuccessful.ShouldBeFalse(),
+            () => result.ErrorCode().ShouldBe(GlbErrorCode.ChunkPayloadTruncated));
     }
 
     [Test]
@@ -158,7 +168,8 @@ public sealed class GlbAsyncTests
 
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
-        result.IsSuccessful.ShouldBeFalse();
-        result.ErrorCode().ShouldBe(GlbErrorCode.ChunkUnaligned);
+        result.ShouldSatisfyAllConditions(
+            () => result.IsSuccessful.ShouldBeFalse(),
+            () => result.ErrorCode().ShouldBe(GlbErrorCode.ChunkUnaligned));
     }
 }
