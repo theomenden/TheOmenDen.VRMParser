@@ -26,3 +26,22 @@ python generate_fixtures.py
 
 Chunks are padded exactly as `GlbDocument` writes them (JSON with `0x20`, BIN with `0x00`, 4-byte
 aligned), so a `Parse → ToBytes` cycle is byte-identical.
+
+## Opt-in real-world model (`RealWorldVrmTests`)
+Full-size avatar exports (a ~37 MB UniVRM/VRoid `.vrm`, for example) are too large and usually too
+licence-encumbered to commit. `RealWorldVrmTests` instead reads a model from a path you supply via the
+`VRMPARSER_REAL_VRM_PATH` environment variable, and **skips entirely** when that variable is unset or
+the file is missing — so a fresh clone and CI stay green without the asset.
+
+Point it at any real `.vrm`/`.glb` to exercise parse, async-vs-sync parity, typed binding, and a
+byte-for-byte round-trip at full scale:
+
+```bash
+# bash
+VRMPARSER_REAL_VRM_PATH="/path/to/Model.vrm" dotnet test
+```
+
+```powershell
+# PowerShell
+$env:VRMPARSER_REAL_VRM_PATH = "C:\path\to\Model.vrm"; dotnet test
+```
