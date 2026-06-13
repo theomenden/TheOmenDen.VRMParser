@@ -4,6 +4,13 @@
 * text=auto
 
 ###############################################################################
+# Binary model/fixture formats — never normalize line endings (would corrupt them).
+###############################################################################
+*.glb binary
+*.vrm binary
+*.bin binary
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by
