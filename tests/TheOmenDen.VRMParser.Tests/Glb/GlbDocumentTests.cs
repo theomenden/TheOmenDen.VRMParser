@@ -30,11 +30,11 @@ public sealed class GlbDocumentTests
         GlbDocument document = GlbDocument.Parse(glb).Value;
 
         document.HasBinary.ShouldBeTrue();
-        document.Binary!.Value.Span[..length].ToArray().ShouldBe(binary);
+        document.Binary.Value.Span[..length].ToArray().ShouldBe(binary);
         // A spec-compliant container survives a parse -> write cycle byte-for-byte.
         document.ToBytes().ShouldBe(glb);
 
-        await Assert.That(document.Binary!.Value.Length % 4).IsEqualTo(0);
+        await Assert.That(document.Binary.Value.Length % 4).IsEqualTo(0);
     }
 
     [Test]
@@ -50,7 +50,7 @@ public sealed class GlbDocumentTests
         GlbDocument document = result.Value;
         document.Version.ShouldBe(GlbDocument.SupportedVersion);
         document.HasBinary.ShouldBeFalse();
-        document.Binary.ShouldBeNull();
+        document.Binary.HasValue.ShouldBeFalse();
         // JSON chunk is padded to 4 bytes; trimming the space padding yields the original text.
         Encoding.UTF8.GetString(document.Json.Span).TrimEnd().ShouldBe(GlbTestData.MinimalGltfJson);
 
@@ -67,7 +67,7 @@ public sealed class GlbDocumentTests
 
         document.HasBinary.ShouldBeTrue();
         // Payload is padded to 8 bytes (5 -> 8); the leading bytes are the data, the rest zero padding.
-        document.Binary!.Value.Span[..5].ToArray().ShouldBe(binary);
+        document.Binary.Value.Span[..5].ToArray().ShouldBe(binary);
 
         await Assert.That(document.HasBinary).IsTrue();
     }
@@ -93,7 +93,7 @@ public sealed class GlbDocumentTests
 
         second.Version.ShouldBe(first.Version);
         second.Json.ToArray().ShouldBe(first.Json.ToArray());
-        second.Binary!.Value.ToArray().ShouldBe(first.Binary!.Value.ToArray());
+        second.Binary.Value.ToArray().ShouldBe(first.Binary.Value.ToArray());
         await Assert.That(second.HasBinary).IsEqualTo(first.HasBinary);
     }
 

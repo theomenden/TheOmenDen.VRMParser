@@ -32,7 +32,10 @@ public sealed class GlbAsyncTests
         streamed.Version.ShouldBe(sync.Version);
         streamed.Json.ToArray().ShouldBe(sync.Json.ToArray());
         streamed.HasBinary.ShouldBe(sync.HasBinary);
-        streamed.Binary?.ToArray().ShouldBe(sync.Binary?.ToArray());
+        if (sync.HasBinary)
+        {
+            streamed.Binary.Value.ToArray().ShouldBe(sync.Binary.Value.ToArray());
+        }
     }
 
     // Streaming parse -> streaming write must round-trip every fixture byte-for-byte.
@@ -86,7 +89,7 @@ public sealed class GlbAsyncTests
 
         document.Version.ShouldBe(GlbDocument.SupportedVersion);
         document.HasBinary.ShouldBeFalse();
-        document.Binary.ShouldBeNull();
+        document.Binary.HasValue.ShouldBeFalse();
         await Assert.That(document.Json.IsEmpty).IsFalse();
     }
 

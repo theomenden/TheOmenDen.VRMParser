@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using Corvus.Text.Json;
 using DotNext;
 using DotNext.IO;
@@ -44,9 +43,9 @@ public sealed class GlbDocument
 
     /// <summary>Initializes a new <see cref="GlbDocument"/> from chunk payloads.</summary>
     /// <param name="json">The glTF JSON chunk payload (UTF-8). Trailing padding is optional; it is added on write.</param>
-    /// <param name="binary">The binary buffer chunk payload, or <see langword="null"/> when the container has no <c>BIN</c> chunk.</param>
+    /// <param name="binary">The binary buffer chunk payload, or an empty <see cref="Optional{T}"/> (the default) when the container has no <c>BIN</c> chunk. A present-but-empty payload is distinct from absence and is preserved on write.</param>
     /// <param name="version">The GLB container version. Defaults to <see cref="SupportedVersion"/>.</param>
-    public GlbDocument(ReadOnlyMemory<byte> json, ReadOnlyMemory<byte>? binary = null, uint version = SupportedVersion)
+    public GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemory<byte>> binary = default, uint version = SupportedVersion)
     {
         Json = json;
         Binary = binary;
@@ -63,14 +62,15 @@ public sealed class GlbDocument
     public ReadOnlyMemory<byte> Json { get; }
 
     /// <summary>
-    /// Gets the binary buffer (<c>BIN</c>) chunk payload, or <see langword="null"/> when the container
-    /// has no binary chunk. May include trailing <c>0x00</c> padding when read from an aligned container.
+    /// Gets the binary buffer (<c>BIN</c>) chunk payload, or an empty <see cref="Optional{T}"/> when the
+    /// container has no binary chunk. A present chunk and an absent one are distinct even when the
+    /// payload is empty, which keeps a parse → write cycle byte-stable. May include trailing <c>0x00</c>
+    /// padding when read from an aligned container.
     /// </summary>
-    public ReadOnlyMemory<byte>? Binary { get; }
+    public Optional<ReadOnlyMemory<byte>> Binary { get; }
 
     /// <summary>Gets a value indicating whether this container has a binary (<c>BIN</c>) chunk.</summary>
-    [MemberNotNullWhen(true, nameof(Binary))]
-    public bool HasBinary => Binary is not null;
+    public bool HasBinary => Binary.HasValue;
 
     /// <summary>Parses a GLB (<c>.glb</c> / <c>.vrm</c>) container from its bytes.</summary>
     /// <param name="data">The complete GLB file contents.</param>
@@ -114,7 +114,7 @@ public sealed class GlbDocument
 
         ReadOnlyMemory<byte> json = default;
         bool jsonSeen = false;
-        ReadOnlyMemory<byte>? binary = null;
+        Optional<ReadOnlyMemory<byte>> binary = default;
 
         int offset = HeaderSize;
         int end = (int)declaredLength;
@@ -154,8 +154,8 @@ public sealed class GlbDocument
                     json = payload;
                     jsonSeen = true;
                     break;
-                case BinaryChunkType when binary is null:
-                    binary = payload;
+                case BinaryChunkType when !binary.HasValue:
+                    binary = (ReadOnlyMemory<byte>)payload;
                     break;
                 default:
                     // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
@@ -232,7 +232,7 @@ public sealed class GlbDocument
 
             ReadOnlyMemory<byte> json = default;
             bool jsonSeen = false;
-            ReadOnlyMemory<byte>? binary = null;
+            Optional<ReadOnlyMemory<byte>> binary = default;
 
             long offset = HeaderSize;
             long end = declaredLength;
@@ -290,8 +290,8 @@ public sealed class GlbDocument
                         json = payload;
                         jsonSeen = true;
                         break;
-                    case BinaryChunkType when binary is null:
-                        binary = payload;
+                    case BinaryChunkType when !binary.HasValue:
+                        binary = (ReadOnlyMemory<byte>)payload;
                         break;
                     default:
                         // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
@@ -323,7 +323,7 @@ public sealed class GlbDocument
         int total = HeaderSize + ChunkHeaderSize + jsonChunk;
 
         int binaryChunk = 0;
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             binaryChunk = Align4(bin.Length);
             total += ChunkHeaderSize + binaryChunk;
@@ -358,7 +358,7 @@ public sealed class GlbDocument
         int total = HeaderSize + ChunkHeaderSize + jsonChunk;
 
         int binaryChunk = 0;
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             binaryChunk = Align4(bin.Length);
             total += ChunkHeaderSize + binaryChunk;
@@ -379,7 +379,7 @@ public sealed class GlbDocument
             // JSON chunks pad with spaces (0x20); BIN chunks pad with zeros.
             await WritePaddingAsync(writer, jsonChunk - Json.Length, (byte)' ', cancellationToken).ConfigureAwait(false);
 
-            if (Binary is { } binary)
+            if (Binary.TryGet(out var binary))
             {
                 await writer.WriteLittleEndianAsync<uint>((uint)binaryChunk, cancellationToken).ConfigureAwait(false);
                 await writer.WriteLittleEndianAsync<uint>(BinaryChunkType, cancellationToken).ConfigureAwait(false);
@@ -438,7 +438,7 @@ public sealed class GlbDocument
         span[(offset + Json.Length)..(offset + jsonChunk)].Fill((byte)' ');
         offset += jsonChunk;
 
-        if (Binary is { } bin)
+        if (Binary.TryGet(out var bin))
         {
             BinaryPrimitives.WriteUInt32LittleEndian(span[offset..], (uint)binaryChunk);
             BinaryPrimitives.WriteUInt32LittleEndian(span[(offset + 4)..], BinaryChunkType);
