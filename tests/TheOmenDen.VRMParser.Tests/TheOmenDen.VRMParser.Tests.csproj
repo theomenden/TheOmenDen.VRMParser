@@ -19,4 +19,8 @@
     <ProjectReference Include="..\..\TheOmenDen.VRMParser\TheOmenDen.VRMParser.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Fixtures\*.glb;Fixtures\*.vrm" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -125,7 +125,10 @@ Rules:
   *after* a `--` separator, e.g. `dotnet test -- --coverage --report-trx`.
 
 What to cover for a parser:
-- **Fixtures:** keep real `.glb`/`.vrm` sample files as test assets and assert parsed structure.
+- **Fixtures:** live in `tests/TheOmenDen.VRMParser.Tests/Fixtures/` (copied to output via the test
+  csproj). `Box.glb` is real CC0 Khronos exporter output; `MinimalVrm{0,1}.vrm` are synthesized by
+  `generate_fixtures.py` (schema-real VRM 0.x / 1.0 in a GLB container). See `Fixtures/README.md` for
+  provenance/licensing. `.glb`/`.vrm` are marked `binary` in `.gitattributes`.
 - **Round-trip:** parse → serialize → re-parse must be byte- or model-stable; assert unknown
   extensions/`extras` survive.
 - **Malformed input:** truncated chunks, bad magic/version, misaligned padding → clear failures, no
