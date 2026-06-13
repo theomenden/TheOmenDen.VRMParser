@@ -53,13 +53,13 @@ public sealed class GlbFixtureTests
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
 
-        gltf.GetProperty("extensionsUsed").EnumerateArray()
+        gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
             .Select(e => e.GetString()).ShouldContain("VRMC_vrm");
 
-        JsonElement vrm = gltf.GetProperty("extensions").GetProperty("VRMC_vrm");
-        vrm.GetProperty("specVersion").GetString().ShouldBe("1.0");
-        vrm.GetProperty("meta").GetProperty("name").GetString().ShouldBe("TheOmenDen Test Avatar");
-        vrm.GetProperty("humanoid").GetProperty("humanBones").EnumerateObject().Count().ShouldBe(15);
+        JsonElement vrm = gltf.GetProperty("extensions"u8).GetProperty("VRMC_vrm"u8);
+        vrm.GetProperty("specVersion"u8).GetString().ShouldBe("1.0");
+        vrm.GetProperty("meta"u8).GetProperty("name"u8).GetString().ShouldBe("TheOmenDen Test Avatar");
+        vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).EnumerateObject().Count().ShouldBe(15);
 
         await Assert.That(document.HasBinary).IsTrue();
     }
@@ -72,14 +72,14 @@ public sealed class GlbFixtureTests
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
 
-        gltf.GetProperty("extensionsUsed").EnumerateArray()
+        gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
             .Select(e => e.GetString()).ShouldContain("VRM");
 
-        JsonElement vrm = gltf.GetProperty("extensions").GetProperty("VRM");
-        vrm.GetProperty("specVersion").GetString().ShouldBe("0.0");
-        vrm.GetProperty("humanoid").GetProperty("humanBones").GetArrayLength().ShouldBe(15);
+        JsonElement vrm = gltf.GetProperty("extensions"u8).GetProperty("VRM"u8);
+        vrm.GetProperty("specVersion"u8).GetString().ShouldBe("0.0");
+        vrm.GetProperty("humanoid"u8).GetProperty("humanBones"u8).GetArrayLength().ShouldBe(15);
 
-        await Assert.That(gltf.TryGetProperty("extensions", out _)).IsTrue();
+        await Assert.That(gltf.TryGetProperty("extensions"u8, out _)).IsTrue();
     }
 
     [Test]
@@ -87,10 +87,11 @@ public sealed class GlbFixtureTests
     {
         foreach (string name in new[] { "Box.glb", "MinimalVrm0.vrm", "MinimalVrm1.vrm" })
         {
-            GlbDocument.TryParse(Load(name), out GlbDocument? document).ShouldBeTrue();
-            document.ShouldNotBeNull();
-        }
+            bool parsed = GlbDocument.TryParse(Load(name), out GlbDocument? document);
 
-        await Assert.That(true).IsTrue();
+            parsed.ShouldBeTrue();
+            document.ShouldNotBeNull();
+            await Assert.That(parsed).IsTrue();
+        }
     }
 }
