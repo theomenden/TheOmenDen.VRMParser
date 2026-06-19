@@ -10,7 +10,7 @@
     <!-- Model generation -->
     <PackageVersion Include="Corvus.Text.Json" Version="5.1.16" />
     <PackageVersion Include="Corvus.Text.Json.CodeGeneration" Version="5.1.16" />
-    <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.1.16" />
+    <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.1.19" />
 
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.9" />
