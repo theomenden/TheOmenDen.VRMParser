@@ -17,7 +17,7 @@
 
     <!-- High-performance processing / binary IO -->
     <PackageVersion Include="DotNext" Version="6.3.0" />
-    <PackageVersion Include="DotNext.IO" Version="6.3.0" />
+    <PackageVersion Include="DotNext.IO" Version="6.7.1" />
 
     <!-- Analyzers -->
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
