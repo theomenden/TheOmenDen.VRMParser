@@ -16,7 +16,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.9" />
 
     <!-- High-performance processing / binary IO -->
-    <PackageVersion Include="DotNext" Version="6.3.0" />
+    <PackageVersion Include="DotNext" Version="6.7.1" />
     <PackageVersion Include="DotNext.IO" Version="6.3.0" />
 
     <!-- Analyzers -->
