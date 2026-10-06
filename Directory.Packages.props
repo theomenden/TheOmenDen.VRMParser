@@ -12,9 +12,8 @@
     <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.7.5" />
 
     <!-- High-performance processing / binary IO -->
-    <PackageVersion Include="DotNext" Version="6.4.1" />
-    <PackageVersion Include="DotNext.Threading" Version="6.4.1" />
-    <PackageVersion Include="DotNext.IO" Version="6.4.1" />
+    <PackageVersion Include="DotNext" Version="6.8.0" />
+    <PackageVersion Include="DotNext.IO" Version="6.8.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
 
     <!-- Analyzers -->
