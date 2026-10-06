@@ -1,6 +1,7 @@
 ﻿using Corvus.Text.Json;
 
 namespace TheOmenDen.VRMParser.Models.Records;
+
 [JsonSchemaTypeGenerator($"../../{PathingConstants.AccessorPath}{PathingConstants.SchemaJsonSuffix}")]
 internal readonly partial struct GltfAccessor;
 
