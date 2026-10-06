@@ -9,6 +9,14 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
+		<!-- Static analysis: the shipped library builds warning-free, so keep it that way. -->
+		<AnalysisLevel>latest-recommended</AnalysisLevel>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<PropertyGroup>
 		<CorvusTextJsonOptionalAsNullable>NullOrUndefined</CorvusTextJsonOptionalAsNullable>
 		<CorvusTextJsonDefaultAccessibility>Internal</CorvusTextJsonDefaultAccessibility>
 	</PropertyGroup>
@@ -205,7 +213,11 @@
 		</PackageReference>
 		<PackageReference Include="DotNext" />
 		<PackageReference Include="DotNext.IO" />
-		<PackageReference Include="Microsoft.Extensions.Logging" />
+		<PackageReference Include="CommunityToolkit.HighPerformance" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+		<!-- Dev-time ReSharper/Rider hints only; attributes are [Conditional] and not emitted. -->
+		<PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
+		<Using Include="JetBrains.Annotations" />
 		<PackageReference Include="Roslynator.Analyzers">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

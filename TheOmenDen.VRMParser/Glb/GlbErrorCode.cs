@@ -5,6 +5,7 @@ namespace TheOmenDen.VRMParser.Glb;
 /// Carried by <see cref="GlbFormatException"/> and surfaced through the <c>DotNext.Result&lt;T&gt;</c>
 /// returned by <see cref="GlbDocument.Parse"/> / <see cref="GlbDocument.ParseAsync"/>.
 /// </summary>
+[PublicAPI]
 public enum GlbErrorCode
 {
     /// <summary>No error — the null-object sentinel for a successful parse. See <see cref="GlbResultExtensions.ErrorCode"/>.</summary>
@@ -42,4 +43,7 @@ public enum GlbErrorCode
 
     /// <summary>The container has no JSON chunk.</summary>
     MissingJsonChunk,
+
+    /// <summary>A chunk declares a payload larger than a single .NET array can hold.</summary>
+    ChunkTooLarge,
 }

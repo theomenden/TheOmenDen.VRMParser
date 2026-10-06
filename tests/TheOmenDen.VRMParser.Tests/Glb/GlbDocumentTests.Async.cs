@@ -159,11 +159,12 @@ public sealed partial class GlbDocumentTests
     public async Task ParseAsync_ShouldReturnChunkPayloadTruncatedError_WhenStreamEndsMidPayload()
     {
         // Arrange — drop the trailing BIN payload bytes while leaving the header's declared length intact.
+        // Non-seekable, so the up-front length check can't catch it and the payload read must.
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, GlbTestData.Payload(GlbTestData.ChunkAlignment));
         byte[] truncated = glb[..^GlbTestData.ChunkAlignment];
 
         // Act
-        await using var stream = new MemoryStream(truncated, writable: false);
+        await using var stream = new GlbTestData.NonSeekableStream(truncated);
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
@@ -184,5 +185,33 @@ public sealed partial class GlbDocumentTests
 
         // Assert
         await AssertFailsWith(result, GlbErrorCode.ChunkUnaligned);
+    }
+
+    [Test]
+    public async Task ParseAsync_ShouldReturnDeclaredLengthExceedsDataError_WhenSeekableStreamIsShorterThanDeclared()
+    {
+        // Arrange
+        await using var stream = new MemoryStream(GlbTestData.InflatedHeader(), writable: false);
+
+        // Act
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        // Assert
+        await AssertFailsWith(result, GlbErrorCode.DeclaredLengthExceedsData);
+    }
+
+    // A non-seekable stream can't be length-checked up front, so the oversize chunk must be rejected
+    // before allocating (previously the (int) cast overflowed and threw instead of returning a Result).
+    [Test]
+    public async Task ParseAsync_ShouldReturnChunkTooLargeError_WhenNonSeekableChunkExceedsArrayLimit()
+    {
+        // Arrange
+        await using var stream = new GlbTestData.NonSeekableStream(GlbTestData.InflatedHeader());
+
+        // Act
+        Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
+
+        // Assert
+        await AssertFailsWith(result, GlbErrorCode.ChunkTooLarge);
     }
 }

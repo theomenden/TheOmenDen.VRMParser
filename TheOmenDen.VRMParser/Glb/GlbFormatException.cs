@@ -19,6 +19,7 @@ namespace TheOmenDen.VRMParser.Glb;
 /// <para>Build instances through the static factories — they populate the code, category, message, and
 /// structured metadata together so faults are reported consistently.</para>
 /// </remarks>
+[PublicAPI]
 public sealed class GlbFormatException : FormatException, IVrmError
 {
     /// <summary>Metadata key for a byte offset within the container.</summary>
@@ -122,7 +123,7 @@ public sealed class GlbFormatException : FormatException, IVrmError
             new() { [ActualKey] = declaredLength, [ExpectedKey] = headerSize });
 
     /// <summary>The header declares more bytes than the input actually contains.</summary>
-    public static GlbFormatException DeclaredLengthExceedsData(uint declaredLength, int actualLength) =>
+    public static GlbFormatException DeclaredLengthExceedsData(uint declaredLength, long actualLength) =>
         new(GlbErrorCode.DeclaredLengthExceedsData, VrmErrorCategory.Truncated,
             $"GLB is truncated: the header declares {declaredLength} bytes but only {actualLength} are present.",
             innerException: null,
@@ -177,6 +178,13 @@ public sealed class GlbFormatException : FormatException, IVrmError
             innerException: null,
             metadata: null);
 
+    /// <summary>A chunk declares a payload larger than a single .NET array can hold (asynchronous path).</summary>
+    public static GlbFormatException ChunkTooLarge(int chunkIndex, uint chunkLength) =>
+        new(GlbErrorCode.ChunkTooLarge, VrmErrorCategory.Unsupported,
+            $"GLB chunk {chunkIndex} declares {chunkLength} bytes, more than the {Array.MaxLength}-byte array limit.",
+            innerException: null,
+            new() { [ChunkIndexKey] = chunkIndex, [ActualKey] = chunkLength, [ExpectedKey] = Array.MaxLength });
+
     private static string ToStableCode(GlbErrorCode code) => code switch
     {
         GlbErrorCode.TooShort => "glb.too_short",
@@ -190,6 +198,7 @@ public sealed class GlbFormatException : FormatException, IVrmError
         GlbErrorCode.ChunkPayloadTruncated => "glb.chunk_payload_truncated",
         GlbErrorCode.FirstChunkNotJson => "glb.first_chunk_not_json",
         GlbErrorCode.MissingJsonChunk => "glb.missing_json_chunk",
+        GlbErrorCode.ChunkTooLarge => "glb.chunk_too_large",
         _ => "glb.none",
     };
 }

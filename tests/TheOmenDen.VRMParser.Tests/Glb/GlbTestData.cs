@@ -35,6 +35,12 @@ internal static class GlbTestData
     /// <summary>Byte offset of the first (JSON) chunk's type field.</summary>
     public const int FirstChunkTypeOffset = FirstChunkLengthOffset + sizeof(uint);
 
+    /// <summary>A 4-byte-aligned chunk length just past <see cref="Array.MaxLength"/> — unrepresentable as one array.</summary>
+    public const uint OversizedChunkLength = 0x8000_0000;
+
+    /// <summary>The largest 4-byte-aligned declared container length a GLB header can carry.</summary>
+    public const uint MaxDeclaredLength = 0xFFFF_FFFC;
+
     /// <summary>A deterministic pseudo-random payload; the length doubles as the seed so runs are reproducible.</summary>
     public static byte[] Payload(int length) => new Faker { Random = new Randomizer(length + 1) }.Random.Bytes(length);
 
@@ -82,4 +88,19 @@ internal static class GlbTestData
     }
 
     private static int Align(int length) => (length + ChunkAlignment - 1) & ~(ChunkAlignment - 1);
+
+    /// <summary>A valid GLB whose header and first chunk claim far more bytes than the buffer holds.</summary>
+    public static byte[] InflatedHeader()
+    {
+        byte[] glb = Build(MinimalGltfJson);
+        BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(DeclaredLengthOffset), MaxDeclaredLength);
+        BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(FirstChunkLengthOffset), OversizedChunkLength);
+        return glb;
+    }
+
+    /// <summary>A read-only stream that hides its length, as a network or pipe stream would.</summary>
+    public sealed class NonSeekableStream(byte[] data) : MemoryStream(data, writable: false)
+    {
+        public override bool CanSeek => false;
+    }
 }

@@ -13,6 +13,7 @@ namespace TheOmenDen.VRMParser.Results;
 /// can destructure these straight into structured logs (Serilog et al.) without this library
 /// referencing any logging sink.
 /// </remarks>
+[PublicAPI]
 public interface IVrmError
 {
     /// <summary>A stable, machine-readable identifier for this fault (e.g. <c>"glb.bad_magic"</c>).</summary>

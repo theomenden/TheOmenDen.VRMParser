@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Buffers.Binary;
+using CommunityToolkit.HighPerformance.Buffers;
 using Corvus.Text.Json;
 using DotNext;
 using DotNext.IO;
@@ -27,6 +27,7 @@ namespace TheOmenDen.VRMParser.Glb;
 /// <param name="json">The glTF JSON chunk payload (UTF-8). Trailing padding is optional; it is added on write.</param>
 /// <param name="binary">The binary buffer chunk payload, or an empty <see cref="Optional{T}"/> (the default) when the container has no <c>BIN</c> chunk. A present-but-empty payload is distinct from absence and is preserved on write.</param>
 /// <param name="version">The GLB container version. Defaults to <see cref="SupportedVersion"/>.</param>
+[PublicAPI]
 public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemory<byte>> binary = default, uint version = GlbDocument.SupportedVersion)
 {
     /// <summary>The GLB magic value, the little-endian <c>uint</c> for the ASCII <c>"glTF"</c>.</summary>
@@ -72,6 +73,7 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
     /// thrown for malformed data; read <see cref="Result{T}.Value"/> to (re)throw, or inspect
     /// <see cref="GlbResultExtensions.ErrorCode"/> to branch on the <see cref="GlbErrorCode"/>.
     /// </returns>
+    [Pure]
     public static Result<GlbDocument> Parse(ReadOnlyMemory<byte> data)
     {
         ReadOnlySpan<byte> span = data.Span;
@@ -184,16 +186,19 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
     /// synchronous path.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    [MustUseReturnValue]
     public static async ValueTask<Result<GlbDocument>> ParseAsync(Stream source, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        // When the stream knows its length, reject an inflated declared length before allocating for it.
+        long available = source.CanSeek ? source.Length - source.Position : -1;
+
         // A small scratch buffer backs the reader's little-endian integer reads; chunk payloads are
         // read straight into their own arrays and never touch it.
-        byte[] scratch = ArrayPool<byte>.Shared.Rent(ChunkHeaderSize);
-        try
+        using (MemoryOwner<byte> scratch = MemoryOwner<byte>.Allocate(ChunkHeaderSize))
         {
-            IAsyncBinaryReader reader = IAsyncBinaryReader.Create(source, scratch.AsMemory(0, ChunkHeaderSize));
+            IAsyncBinaryReader reader = IAsyncBinaryReader.Create(source, scratch.Memory);
 
             uint magic, version, declaredLength;
             try
@@ -220,6 +225,11 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
             if (declaredLength < HeaderSize)
             {
                 return new(GlbFormatException.DeclaredLengthTooSmall(declaredLength, HeaderSize));
+            }
+
+            if (available >= 0 && declaredLength > available)
+            {
+                return new(GlbFormatException.DeclaredLengthExceedsData(declaredLength, available));
             }
 
             ReadOnlyMemory<byte> json = default;
@@ -265,7 +275,14 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
                     return new(GlbFormatException.FirstChunkNotJson(chunkType));
                 }
 
+                if (chunkLength > Array.MaxLength)
+                {
+                    return new(GlbFormatException.ChunkTooLarge(chunkIndex, chunkLength));
+                }
+
                 // Copy the payload into an owned array — the document holds non-owned memory.
+                // ponytail: a non-seekable stream is trusted for this allocation size (up to ~2 GiB) before
+                // its bytes arrive; read in bounded slices if untrusted network streams become an input.
                 byte[] payload = new byte[(int)chunkLength];
                 try
                 {
@@ -301,26 +318,15 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
 
             return new GlbDocument(json, binary, version);
         }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(scratch);
-        }
     }
 
     /// <summary>Serializes this container to a new GLB byte array, padding each chunk to a 4-byte boundary.</summary>
     /// <returns>The complete GLB file contents.</returns>
+    /// <exception cref="OverflowException">The payloads are too large for a single GLB byte array.</exception>
+    [Pure]
     public byte[] ToBytes()
     {
-        int jsonChunk = Align4(Json.Length);
-        int total = HeaderSize + ChunkHeaderSize + jsonChunk;
-
-        int binaryChunk = 0;
-        if (Binary.TryGet(out var bin))
-        {
-            binaryChunk = Align4(bin.Length);
-            total += ChunkHeaderSize + binaryChunk;
-        }
-
+        (int jsonChunk, int binaryChunk, int total) = Measure();
         byte[] buffer = new byte[total];
         WriteTo(buffer, jsonChunk, binaryChunk, total);
         return buffer;
@@ -342,24 +348,17 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
     /// first) this streams the header and each chunk directly to <paramref name="destination"/>, writing
     /// the <see cref="Json"/> and <see cref="Binary"/> payloads without an intermediate full-file copy.
     /// </remarks>
+    /// <exception cref="OverflowException">The payloads are too large for a single GLB byte array.</exception>
     public async ValueTask WriteToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(destination);
 
-        int jsonChunk = Align4(Json.Length);
-        int total = HeaderSize + ChunkHeaderSize + jsonChunk;
+        (int jsonChunk, int binaryChunk, int total) = Measure();
+        Binary.TryGet(out var bin);
 
-        int binaryChunk = 0;
-        if (Binary.TryGet(out var bin))
+        using (MemoryOwner<byte> scratch = MemoryOwner<byte>.Allocate(ChunkHeaderSize))
         {
-            binaryChunk = Align4(bin.Length);
-            total += ChunkHeaderSize + binaryChunk;
-        }
-
-        byte[] scratch = ArrayPool<byte>.Shared.Rent(ChunkHeaderSize);
-        try
-        {
-            IAsyncBinaryWriter writer = IAsyncBinaryWriter.Create(destination, scratch.AsMemory(0, ChunkHeaderSize));
+            IAsyncBinaryWriter writer = IAsyncBinaryWriter.Create(destination, scratch.Memory);
 
             await writer.WriteLittleEndianAsync<uint>(Magic, cancellationToken).ConfigureAwait(false);
             await writer.WriteLittleEndianAsync<uint>(Version, cancellationToken).ConfigureAwait(false);
@@ -379,10 +378,6 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
                 await WritePaddingAsync(writer, binaryChunk - bin.Length, 0x00, cancellationToken).ConfigureAwait(false);
             }
         }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(scratch);
-        }
     }
 
     private static async ValueTask WritePaddingAsync(
@@ -393,15 +388,10 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
             return;
         }
 
-        byte[] padding = ArrayPool<byte>.Shared.Rent(count);
-        try
+        using (MemoryOwner<byte> padding = MemoryOwner<byte>.Allocate(count))
         {
-            Array.Fill(padding, value, 0, count);
-            await writer.WriteAsync(padding.AsMemory(0, count), null, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(padding);
+            padding.Span.Fill(value);
+            await writer.WriteAsync(padding.Memory, null, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -410,9 +400,19 @@ public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemo
     /// memory and must be disposed; read <see cref="ParsedJsonDocument{T}.RootElement"/> for the model.
     /// </summary>
     /// <remarks>Internal until the generated glTF model is part of the public API surface.</remarks>
+    [MustDisposeResource]
     internal ParsedJsonDocument<GltfRoot> ParseGltf() => ParsedJsonDocument<GltfRoot>.Parse(Json);
 
-    private static int Align4(int length) => (length + 3) & ~3;
+    private static int Align4(int length) => checked(length + 3) & ~3;
+
+    /// <summary>Padded chunk sizes and the total file length; throws rather than writing a wrapped length.</summary>
+    private (int JsonChunk, int BinaryChunk, int Total) Measure()
+    {
+        int jsonChunk = Align4(Json.Length);
+        int binaryChunk = Binary.TryGet(out var bin) ? Align4(bin.Length) : 0;
+        int total = checked(HeaderSize + ChunkHeaderSize + jsonChunk + (Binary.HasValue ? ChunkHeaderSize + binaryChunk : 0));
+        return (jsonChunk, binaryChunk, total);
+    }
 
     private void WriteTo(Span<byte> span, int jsonChunk, int binaryChunk, int total)
     {

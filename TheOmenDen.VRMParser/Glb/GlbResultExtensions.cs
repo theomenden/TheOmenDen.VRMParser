@@ -8,12 +8,14 @@ namespace TheOmenDen.VRMParser.Glb;
 /// <see langword="null"/>: a successful result yields the <see cref="GlbErrorCode.None"/> sentinel and
 /// an empty <see cref="Optional{T}"/> rather than a null error.
 /// </summary>
+[PublicAPI]
 public static class GlbResultExtensions
 {
     /// <summary>
     /// Gets the <see cref="GlbErrorCode"/> describing why a parse failed, or
     /// <see cref="GlbErrorCode.None"/> when it succeeded. Never inspects a <see langword="null"/> error.
     /// </summary>
+    [Pure]
     public static GlbErrorCode ErrorCode<T>(this in Result<T> result) =>
         result.Error is GlbFormatException glb ? glb.Code : GlbErrorCode.None;
 
@@ -21,6 +23,7 @@ public static class GlbResultExtensions
     /// Gets the <see cref="GlbFormatException"/> a failed parse produced, as an <see cref="Optional{T}"/>
     /// that is empty for a successful result — a null-object alternative to a nullable error reference.
     /// </summary>
+    [Pure]
     public static Optional<GlbFormatException> GlbError<T>(this in Result<T> result) =>
         result.Error is GlbFormatException glb ? glb : Optional<GlbFormatException>.None;
 }

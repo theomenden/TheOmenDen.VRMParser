@@ -13,17 +13,19 @@
     <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.7.5" />
 
     <!-- Logging -->
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
 
     <!-- High-performance processing / binary IO -->
     <PackageVersion Include="DotNext" Version="6.4.1" />
     <PackageVersion Include="DotNext.Threading" Version="6.4.1" />
     <PackageVersion Include="DotNext.IO" Version="6.4.1" />
+    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
 
     <!-- Analyzers -->
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
 
     <!-- Benchmarking & runtime diagnostics -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -35,7 +37,6 @@
     <PackageVersion Include="TUnit.Mocks" Version="1.60.*" />
     <PackageVersion Include="TUnit.Assertions" Version="1.60.*" />
     <PackageVersion Include="TUnit.Assertions.Should" Version="1.60.0-beta" />
-    <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
   </ItemGroup>
 

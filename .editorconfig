@@ -7,3 +7,9 @@ root = true
 [*.g.cs]
 generated_code = true
 dotnet_diagnostic.CS0618.severity = none
+
+# Library code: enforce async hygiene (tests/benchmarks are exempt — they own their sync context).
+[TheOmenDen.VRMParser/**/*.cs]
+dotnet_diagnostic.CA2007.severity = warning   # ConfigureAwait(false) on every await
+dotnet_diagnostic.CA1849.severity = warning   # don't call sync APIs in async methods
+dotnet_diagnostic.CA2016.severity = warning   # forward the CancellationToken

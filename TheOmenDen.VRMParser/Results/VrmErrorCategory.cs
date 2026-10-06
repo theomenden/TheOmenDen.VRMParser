@@ -6,6 +6,7 @@ namespace TheOmenDen.VRMParser.Results;
 /// onto transport-specific status codes (HTTP, gRPC, …) by a consuming application without this
 /// library taking a dependency on any of them.
 /// </summary>
+[PublicAPI]
 public enum VrmErrorCategory
 {
     /// <summary>The category is unknown or not applicable (the sentinel/default).</summary>
