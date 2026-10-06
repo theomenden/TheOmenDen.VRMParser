@@ -11,13 +11,22 @@ Distributed as a **NuGet package** (class library, no entry point).
 
 | Concern            | Choice                                                              |
 |--------------------|--------------------------------------------------------------------|
-| Target framework   | `net10.0` (SDK pinned via `global.json`, `rollForward: latestMinor`) |
-| Language           | C# 14, `ImplicitUsings` + `Nullable` enabled                       |
-| Model generation   | Corvus.Text.Json v5 (`Corvus.Text.Json` + `.SourceGenerator` + `.CodeGeneration`); namespace is `Corvus.Text.Json` |
+| Target framework   | `net10.0` only (SDK pinned via `global.json`, `rollForward: latestMinor`) — see *Consumers* |
+| Language           | C# 14 (explicit `LangVersion`), `ImplicitUsings` + `Nullable` enabled |
+| Model generation   | Corvus.Text.Json 5.7.x (`Corvus.Text.Json` + `.SourceGenerator` + `.CodeGeneration`, versions kept in lockstep in `Directory.Packages.props`); namespace is `Corvus.Text.Json` |
+| Results / binary IO | DotNext `Result<T>`/`Optional<T>` + DotNext.IO (**net10.0-only packages**) |
 | Concurrency        | `System.Threading.Channels` (in the net10 shared framework — no package ref needed) |
 | Logging            | `Microsoft.Extensions.Logging` abstractions only                  |
 | Analyzers          | Roslynator, Roslynator.CodeAnalysis, SonarAnalyzer.CSharp (treat warnings seriously) |
-| Testing            | **TUnit** + TUnit Mocks + **Shouldly** + **Bogus** (see Testing)   |
+| Testing            | **TUnit** + TUnit Mocks + TUnit.Assertions + **Tunit.Assertions.Should** + **Bogus** (see Testing)   |
+
+### Consumers
+
+The primary consumer is **Corvus Avatar** (`../Corvus Avatar`, `net10.0` / `net10.0-windows`), which will
+render glTF/VRM models alongside Live2D. Design the public API for an app consuming the VRM spec:
+efficient load paths and a small, stable surface. **Unity is not a target**, so don't add
+`netstandard2.x` targets. A 2026-10 spike found it impractical anyway: Corvus's generated code needs
+C# 11+ (so a C# 9 tier can't compile the models), and DotNext ships `net10.0` only.
 
 ## Architecture — feature-grouped library
 
@@ -100,10 +109,12 @@ Test project setup (`tests/TheOmenDen.VRMParser.Tests/`):
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="TUnit" Version="1.5*" />
-    <PackageReference Include="TUnit.Mocks" Version="1.53.0" />
-    <PackageReference Include="Shouldly" Version="4.3.0" />
-    <PackageReference Include="Bogus" Version="35.6.3" />
+    <!-- Versions are central in Directory.Packages.props -->
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="TUnit.Mocks" />
+    <PackageReference Include="TUnit.Assertions" />
+    <PackageReference Include="TUnit.Assertions.Should" />
+    <PackageReference Include="Bogus" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\TheOmenDen.VRMParser\TheOmenDen.VRMParser.csproj" />
@@ -119,8 +130,13 @@ Rules:
   `TestingPlatformDotnetTestSupport` property; it's the .NET 9 mechanism and is now unnecessary.
 - Scaffold with `dotnet new install TUnit.Templates` then `dotnet new TUnit` (delete the generated
   `Calculator`/demo files).
-- Use `[Test]` / `[Arguments(...)]` (TUnit attributes), **Shouldly** for assertions (`result.ShouldBe(...)`),
-  **TUnit.Mocks** for fakes, and **Bogus** to generate randomized glTF/VRM model data.
+- Use `[Test]` / `[Arguments(...)]` (TUnit attributes), **TUnit assertions** (`await Assert.That(x).IsEqualTo(y)`,
+  grouped in `using (Assert.Multiple()) { ... }`; tests are `async Task`), **TUnit.Mocks** for fakes, and
+  **Bogus** for randomized data (seeded, e.g. `GlbTestData.Payload(length)`).
+- **Byte arrays:** `IsEqualTo` compares arrays *by reference*. Use
+  `IsEquivalentTo(expected, CollectionOrdering.Matching)` (the default ordering ignores order).
+- **No magic values in tests:** GLB layout sizes/offsets live in `GlbTestData`, fixture names/facts in
+  `Fixtures`, and glTF/VRM JSON names in `VrmJson`. Assert on `GlbErrorCode`, not on message text.
 - Run with `dotnet run --project tests/...` or `dotnet test`. **Both work**; pass TUnit/MTP flags
   *after* a `--` separator, e.g. `dotnet test -- --coverage --report-trx`.
 
