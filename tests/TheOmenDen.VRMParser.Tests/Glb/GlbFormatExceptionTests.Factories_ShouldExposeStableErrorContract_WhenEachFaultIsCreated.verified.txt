@@ -1,0 +1,141 @@
+﻿[
+  {
+    Code: glb.too_short,
+    Category: Truncated,
+    Metadata: {
+      actual: 11,
+      category: Truncated,
+      code: glb.too_short,
+      expected: 12
+    }
+  },
+  {
+    Code: glb.too_short,
+    Category: Truncated,
+    Metadata: {
+      category: Truncated,
+      code: glb.too_short,
+      expected: 12
+    }
+  },
+  {
+    Code: glb.bad_magic,
+    Category: Format,
+    Metadata: {
+      actual: 3115029400,
+      category: Format,
+      code: glb.bad_magic,
+      expected: 1179937895
+    }
+  },
+  {
+    Code: glb.unsupported_version,
+    Category: Unsupported,
+    Metadata: {
+      actual: 3,
+      category: Unsupported,
+      code: glb.unsupported_version,
+      expected: 2
+    }
+  },
+  {
+    Code: glb.declared_length_too_small,
+    Category: Format,
+    Metadata: {
+      actual: 11,
+      category: Format,
+      code: glb.declared_length_too_small,
+      expected: 12
+    }
+  },
+  {
+    Code: glb.declared_length_exceeds_data,
+    Category: Truncated,
+    Metadata: {
+      actual: 12,
+      category: Truncated,
+      code: glb.declared_length_exceeds_data,
+      expected: 4294967292
+    }
+  },
+  {
+    Code: glb.chunk_header_truncated,
+    Category: Truncated,
+    Metadata: {
+      category: Truncated,
+      code: glb.chunk_header_truncated,
+      expected: 8,
+      offset: 12,
+      remaining: 4
+    }
+  },
+  {
+    Code: glb.chunk_header_truncated,
+    Category: Truncated,
+    Metadata: {
+      category: Truncated,
+      code: glb.chunk_header_truncated,
+      offset: 12
+    }
+  },
+  {
+    Code: glb.chunk_unaligned,
+    Category: Format,
+    Metadata: {
+      actual: 2147483647,
+      category: Format,
+      chunkIndex: 1,
+      code: glb.chunk_unaligned
+    }
+  },
+  {
+    Code: glb.chunk_overrun,
+    Category: Format,
+    Metadata: {
+      actual: 2147483648,
+      category: Format,
+      chunkIndex: 1,
+      code: glb.chunk_overrun,
+      remaining: 4
+    }
+  },
+  {
+    Code: glb.chunk_payload_truncated,
+    Category: Truncated,
+    Metadata: {
+      actual: 2147483648,
+      category: Truncated,
+      chunkIndex: 1,
+      code: glb.chunk_payload_truncated
+    }
+  },
+  {
+    Code: glb.first_chunk_not_json,
+    Category: Format,
+    Metadata: {
+      actual: 5130562,
+      category: Format,
+      code: glb.first_chunk_not_json,
+      expected: 1313821514
+    }
+  },
+  {
+    Code: glb.missing_json_chunk,
+    Category: Validation,
+    Metadata: {
+      category: Validation,
+      code: glb.missing_json_chunk
+    }
+  },
+  {
+    Code: glb.chunk_too_large,
+    Category: Unsupported,
+    Metadata: {
+      actual: 2147483648,
+      category: Unsupported,
+      chunkIndex: 1,
+      code: glb.chunk_too_large,
+      expected: 2147483591
+    }
+  }
+]

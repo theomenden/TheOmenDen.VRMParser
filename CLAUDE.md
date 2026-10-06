@@ -13,10 +13,10 @@ Distributed as a **NuGet package** (class library, no entry point).
 |--------------------|--------------------------------------------------------------------|
 | Target framework   | `net10.0` only (SDK pinned via `global.json`, `rollForward: latestMinor`) — see *Consumers* |
 | Language           | C# 14 (explicit `LangVersion`), `ImplicitUsings` + `Nullable` enabled |
-| Model generation   | Corvus.Text.Json 5.7.x (`Corvus.Text.Json` + `.SourceGenerator` + `.CodeGeneration`, versions kept in lockstep in `Directory.Packages.props`); namespace is `Corvus.Text.Json` |
+| Model generation   | Corvus.Text.Json 5.7.x (`Corvus.Text.Json` runtime + `.SourceGenerator` build-only, versions kept in lockstep in `Directory.Packages.props`); namespace is `Corvus.Text.Json` |
 | Results / binary IO | DotNext `Result<T>`/`Optional<T>` + DotNext.IO (**net10.0-only packages**) |
 | Concurrency        | `System.Threading.Channels` (in the net10 shared framework — no package ref needed) |
-| Logging            | `Microsoft.Extensions.Logging` abstractions only                  |
+| Logging            | None — faults are log-shaped (`IVrmError`); consumers do the logging |
 | Analyzers          | Roslynator, Roslynator.CodeAnalysis, SonarAnalyzer.CSharp (treat warnings seriously) |
 | Testing            | **TUnit** + TUnit Mocks + TUnit.Assertions + **Tunit.Assertions.Should** + **Bogus** (see Testing)   |
 
@@ -81,6 +81,9 @@ back to bytes. Design with that in mind:
 - Schema paths are referenced through **`PathingConstants`** constants, not string literals. When you
   add a schema, add its path constant there and an `AdditionalFiles` entry in the `.csproj`.
 - Public, consumer-facing types (e.g. `GlbDocument`) are `public sealed`. Seal by default.
+- **Public API baseline:** `Microsoft.CodeAnalysis.PublicApiAnalyzers` fails the build (RS0016/RS0017) on any
+  undeclared public-surface change. Record additions in `PublicAPI.Unshipped.txt` (`dotnet format analyzers
+  --diagnostics RS0016`); move entries to `PublicAPI.Shipped.txt` when a version is released.
 - Prefer modern C#: primary constructors, collection expressions, pattern matching, `Span<T>`/
   `ReadOnlySpan<byte>` for binary parsing hot paths (this is a byte-pushing library — avoid
   unnecessary allocations and copies; parse over spans, not `byte[]` slices).
@@ -135,6 +138,8 @@ Rules:
   **Bogus** for randomized data (seeded, e.g. `GlbTestData.Payload(length)`).
 - **Byte arrays:** `IsEqualTo` compares arrays *by reference*. Use
   `IsEquivalentTo(expected, CollectionOrdering.Matching)` (the default ordering ignores order).
+- **Snapshots:** **Verify.TUnit** (theomenden sponsors Verify — `Verify_GitHubSponsorAccount` in the test csproj).
+  Commit `*.verified.txt`; `*.received.*` is git-ignored. Review a `.received` diff before accepting it.
 - **No magic values in tests:** GLB layout sizes/offsets live in `GlbTestData`, fixture names/facts in
   `Fixtures`, and glTF/VRM JSON names in `VrmJson`. Assert on `GlbErrorCode`, not on message text.
 - Run with `dotnet run --project tests/...` or `dotnet test`. **Both work**; pass TUnit/MTP flags

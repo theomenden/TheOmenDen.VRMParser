@@ -1,0 +1,71 @@
+#nullable enable
+const TheOmenDen.VRMParser.Glb.GlbDocument.BinaryChunkType = 5130562 -> uint
+const TheOmenDen.VRMParser.Glb.GlbDocument.JsonChunkType = 1313821514 -> uint
+const TheOmenDen.VRMParser.Glb.GlbDocument.Magic = 1179937895 -> uint
+const TheOmenDen.VRMParser.Glb.GlbDocument.SupportedVersion = 2 -> uint
+const TheOmenDen.VRMParser.Glb.GlbFormatException.ActualKey = "actual" -> string!
+const TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkIndexKey = "chunkIndex" -> string!
+const TheOmenDen.VRMParser.Glb.GlbFormatException.ExpectedKey = "expected" -> string!
+const TheOmenDen.VRMParser.Glb.GlbFormatException.OffsetKey = "offset" -> string!
+const TheOmenDen.VRMParser.Glb.GlbFormatException.RemainingKey = "remaining" -> string!
+static TheOmenDen.VRMParser.Glb.GlbDocument.Parse(System.ReadOnlyMemory<byte> data) -> DotNext.Result<TheOmenDen.VRMParser.Glb.GlbDocument!>
+static TheOmenDen.VRMParser.Glb.GlbDocument.ParseAsync(System.IO.Stream! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<DotNext.Result<TheOmenDen.VRMParser.Glb.GlbDocument!>>
+static TheOmenDen.VRMParser.Glb.GlbFormatException.BadMagic(uint magic) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkHeaderTruncated(long offset, long remaining, int required) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkOverrun(int chunkIndex, uint chunkLength, long remaining) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkPayloadTruncated(int chunkIndex, uint chunkLength, System.Exception! cause) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkTooLarge(int chunkIndex, uint chunkLength) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.ChunkUnaligned(int chunkIndex, uint chunkLength) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.DeclaredLengthExceedsData(uint declaredLength, long actualLength) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.DeclaredLengthTooSmall(uint declaredLength, int headerSize) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.FirstChunkNotJson(uint actualType) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.IncompleteChunkHeader(long offset, System.Exception! cause) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.IncompleteHeader(int required, System.Exception! cause) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.MissingJsonChunk() -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.TooShort(int actualLength, int required) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbFormatException.UnsupportedVersion(uint version) -> TheOmenDen.VRMParser.Glb.GlbFormatException!
+static TheOmenDen.VRMParser.Glb.GlbResultExtensions.ErrorCode<T>(this in DotNext.Result<T> result) -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+static TheOmenDen.VRMParser.Glb.GlbResultExtensions.GlbError<T>(this in DotNext.Result<T> result) -> DotNext.Optional<TheOmenDen.VRMParser.Glb.GlbFormatException!>
+TheOmenDen.VRMParser.Glb.GlbDocument
+TheOmenDen.VRMParser.Glb.GlbDocument.Binary.get -> DotNext.Optional<System.ReadOnlyMemory<byte>>
+TheOmenDen.VRMParser.Glb.GlbDocument.GlbDocument(System.ReadOnlyMemory<byte> json, DotNext.Optional<System.ReadOnlyMemory<byte>> binary = default(DotNext.Optional<System.ReadOnlyMemory<byte>>), uint version = 2) -> void
+TheOmenDen.VRMParser.Glb.GlbDocument.HasBinary.get -> bool
+TheOmenDen.VRMParser.Glb.GlbDocument.Json.get -> System.ReadOnlyMemory<byte>
+TheOmenDen.VRMParser.Glb.GlbDocument.ToBytes() -> byte[]!
+TheOmenDen.VRMParser.Glb.GlbDocument.Version.get -> uint
+TheOmenDen.VRMParser.Glb.GlbDocument.WriteTo(System.IO.Stream! destination) -> void
+TheOmenDen.VRMParser.Glb.GlbDocument.WriteToAsync(System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.BadMagic = 2 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.ChunkHeaderTruncated = 6 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.ChunkOverrun = 8 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.ChunkPayloadTruncated = 9 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.ChunkTooLarge = 12 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.ChunkUnaligned = 7 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.DeclaredLengthExceedsData = 5 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.DeclaredLengthTooSmall = 4 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.FirstChunkNotJson = 10 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.MissingJsonChunk = 11 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.None = 0 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.TooShort = 1 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbErrorCode.UnsupportedVersion = 3 -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbFormatException
+TheOmenDen.VRMParser.Glb.GlbFormatException.Category.get -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Glb.GlbFormatException.Code.get -> TheOmenDen.VRMParser.Glb.GlbErrorCode
+TheOmenDen.VRMParser.Glb.GlbFormatException.GlbFormatException() -> void
+TheOmenDen.VRMParser.Glb.GlbFormatException.GlbFormatException(string! message) -> void
+TheOmenDen.VRMParser.Glb.GlbFormatException.GlbFormatException(string! message, System.Exception! innerException) -> void
+TheOmenDen.VRMParser.Glb.GlbFormatException.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+TheOmenDen.VRMParser.Glb.GlbResultExtensions
+TheOmenDen.VRMParser.Results.IVrmError
+TheOmenDen.VRMParser.Results.IVrmError.Category.get -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.IVrmError.Code.get -> string!
+TheOmenDen.VRMParser.Results.IVrmError.Message.get -> string!
+TheOmenDen.VRMParser.Results.IVrmError.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Format = 1 -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Io = 5 -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Truncated = 3 -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Unknown = 0 -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Unsupported = 2 -> TheOmenDen.VRMParser.Results.VrmErrorCategory
+TheOmenDen.VRMParser.Results.VrmErrorCategory.Validation = 4 -> TheOmenDen.VRMParser.Results.VrmErrorCategory

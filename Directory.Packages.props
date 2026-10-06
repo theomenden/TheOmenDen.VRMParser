@@ -2,18 +2,14 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <!-- TUnit is pinned to a floating 1.5* version; CPM requires opting into floating versions. -->
+    <!-- TUnit is pinned to a floating 1.72.* version; CPM requires opting into floating versions. -->
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Model generation -->
     <PackageVersion Include="Corvus.Text.Json" Version="5.7.5" />
-    <PackageVersion Include="Corvus.Text.Json.CodeGeneration" Version="5.7.5" />
     <PackageVersion Include="Corvus.Text.Json.SourceGenerator" Version="5.7.5" />
-
-    <!-- Logging -->
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
 
     <!-- High-performance processing / binary IO -->
     <PackageVersion Include="DotNext" Version="6.4.1" />
@@ -25,6 +21,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
 
     <!-- Benchmarking & runtime diagnostics -->
@@ -33,10 +30,11 @@
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
 
     <!-- Testing -->
-    <PackageVersion Include="TUnit" Version="1.60.*" />
-    <PackageVersion Include="TUnit.Mocks" Version="1.60.*" />
-    <PackageVersion Include="TUnit.Assertions" Version="1.60.*" />
-    <PackageVersion Include="TUnit.Assertions.Should" Version="1.60.0-beta" />
+    <PackageVersion Include="TUnit" Version="1.72.*" />
+    <PackageVersion Include="TUnit.Mocks" Version="1.72.*" />
+    <PackageVersion Include="TUnit.Assertions" Version="1.72.*" />
+    <PackageVersion Include="TUnit.Assertions.Should" Version="1.72.16-beta" />
+    <PackageVersion Include="Verify.TUnit" Version="33.3.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
   </ItemGroup>
 
