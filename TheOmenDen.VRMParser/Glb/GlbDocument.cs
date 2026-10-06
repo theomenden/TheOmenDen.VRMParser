@@ -24,7 +24,10 @@ namespace TheOmenDen.VRMParser.Glb;
 /// survive a round-trip. Unknown or duplicate chunks are ignored per the spec.
 /// </para>
 /// </remarks>
-public sealed class GlbDocument
+/// <param name="json">The glTF JSON chunk payload (UTF-8). Trailing padding is optional; it is added on write.</param>
+/// <param name="binary">The binary buffer chunk payload, or an empty <see cref="Optional{T}"/> (the default) when the container has no <c>BIN</c> chunk. A present-but-empty payload is distinct from absence and is preserved on write.</param>
+/// <param name="version">The GLB container version. Defaults to <see cref="SupportedVersion"/>.</param>
+public sealed class GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemory<byte>> binary = default, uint version = GlbDocument.SupportedVersion)
 {
     /// <summary>The GLB magic value, the little-endian <c>uint</c> for the ASCII <c>"glTF"</c>.</summary>
     public const uint Magic = 0x46546C67;
@@ -41,25 +44,14 @@ public sealed class GlbDocument
     private const int HeaderSize = 12;
     private const int ChunkHeaderSize = 8;
 
-    /// <summary>Initializes a new <see cref="GlbDocument"/> from chunk payloads.</summary>
-    /// <param name="json">The glTF JSON chunk payload (UTF-8). Trailing padding is optional; it is added on write.</param>
-    /// <param name="binary">The binary buffer chunk payload, or an empty <see cref="Optional{T}"/> (the default) when the container has no <c>BIN</c> chunk. A present-but-empty payload is distinct from absence and is preserved on write.</param>
-    /// <param name="version">The GLB container version. Defaults to <see cref="SupportedVersion"/>.</param>
-    public GlbDocument(ReadOnlyMemory<byte> json, Optional<ReadOnlyMemory<byte>> binary = default, uint version = SupportedVersion)
-    {
-        Json = json;
-        Binary = binary;
-        Version = version;
-    }
-
     /// <summary>Gets the GLB container version (always <see cref="SupportedVersion"/> for parsed documents).</summary>
-    public uint Version { get; }
+    public uint Version { get; } = version;
 
     /// <summary>
     /// Gets the glTF JSON chunk payload as UTF-8 bytes. When read from a 4-byte-aligned container this
     /// may include trailing <c>0x20</c> (space) padding, which is insignificant to a JSON parser.
     /// </summary>
-    public ReadOnlyMemory<byte> Json { get; }
+    public ReadOnlyMemory<byte> Json { get; } = json;
 
     /// <summary>
     /// Gets the binary buffer (<c>BIN</c>) chunk payload, or an empty <see cref="Optional{T}"/> when the
@@ -67,7 +59,7 @@ public sealed class GlbDocument
     /// payload is empty, which keeps a parse → write cycle byte-stable. May include trailing <c>0x00</c>
     /// padding when read from an aligned container.
     /// </summary>
-    public Optional<ReadOnlyMemory<byte>> Binary { get; }
+    public Optional<ReadOnlyMemory<byte>> Binary { get; } = binary;
 
     /// <summary>Gets a value indicating whether this container has a binary (<c>BIN</c>) chunk.</summary>
     public bool HasBinary => Binary.HasValue;
@@ -155,7 +147,7 @@ public sealed class GlbDocument
                     jsonSeen = true;
                     break;
                 case BinaryChunkType when !binary.HasValue:
-                    binary = (ReadOnlyMemory<byte>)payload;
+                    binary = payload;
                     break;
                 default:
                     // Unknown or duplicate chunk — ignored per the glTF 2.0 spec.
@@ -379,12 +371,12 @@ public sealed class GlbDocument
             // JSON chunks pad with spaces (0x20); BIN chunks pad with zeros.
             await WritePaddingAsync(writer, jsonChunk - Json.Length, (byte)' ', cancellationToken).ConfigureAwait(false);
 
-            if (Binary.TryGet(out var binary))
+            if (Binary.HasValue)
             {
                 await writer.WriteLittleEndianAsync<uint>((uint)binaryChunk, cancellationToken).ConfigureAwait(false);
                 await writer.WriteLittleEndianAsync<uint>(BinaryChunkType, cancellationToken).ConfigureAwait(false);
-                await writer.WriteAsync(binary, null, cancellationToken).ConfigureAwait(false);
-                await WritePaddingAsync(writer, binaryChunk - binary.Length, 0x00, cancellationToken).ConfigureAwait(false);
+                await writer.WriteAsync(bin, null, cancellationToken).ConfigureAwait(false);
+                await WritePaddingAsync(writer, binaryChunk - bin.Length, 0x00, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
