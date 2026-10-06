@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
-using Bogus;
 using DotNext;
-using Shouldly;
+using TUnit;
+using TUnit.Assertions;
+using TUnit.Assertions.Should;
+using TUnit.Assertions.Enums;
 using TheOmenDen.VRMParser.Glb;
 
 namespace TheOmenDen.VRMParser.Tests.Glb;
@@ -12,18 +14,15 @@ namespace TheOmenDen.VRMParser.Tests.Glb;
 /// </summary>
 public sealed partial class GlbDocumentTests
 {
-    private static string FixturePath(string name) =>
-        Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
-
     // ParseAsync must produce exactly what the synchronous Parse does for real container input.
     [Test]
-    [Arguments("Box.glb")]
-    [Arguments("MinimalVrm0.vrm")]
-    [Arguments("MinimalVrm1.vrm")]
+    [Arguments(Fixtures.Box)]
+    [Arguments(Fixtures.MinimalVrm0)]
+    [Arguments(Fixtures.MinimalVrm1)]
     public async Task ParseAsync_ShouldMatchSyncParse_WhenReadingFixture(string name)
     {
         // Arrange
-        byte[] original = await File.ReadAllBytesAsync(FixturePath(name));
+        byte[] original = await File.ReadAllBytesAsync(Fixtures.PathOf(name));
         GlbDocument sync = GlbDocument.Parse(original).Value;
 
         // Act
@@ -31,28 +30,27 @@ public sealed partial class GlbDocumentTests
         GlbDocument streamed = (await GlbDocument.ParseAsync(stream)).Value;
 
         // Assert
-        streamed.ShouldSatisfyAllConditions(
-            () => streamed.Version.ShouldBe(sync.Version),
-            () => streamed.Json.ToArray().ShouldBe(sync.Json.ToArray()),
-            () => streamed.HasBinary.ShouldBe(sync.HasBinary),
-            () =>
+        using (Assert.Multiple())
+        {
+            await Assert.That(streamed.Version).IsEqualTo(sync.Version);
+            await Assert.That(streamed.Json.ToArray()).IsEquivalentTo(sync.Json.ToArray(), CollectionOrdering.Matching);
+            await Assert.That(streamed.HasBinary).IsEqualTo(sync.HasBinary);
+            if (sync.HasBinary)
             {
-                if (sync.HasBinary)
-                {
-                    streamed.Binary.Value.ToArray().ShouldBe(sync.Binary.Value.ToArray());
-                }
-            });
+                await Assert.That(streamed.Binary.Value.ToArray()).IsEquivalentTo(sync.Binary.Value.ToArray(), CollectionOrdering.Matching);
+            }
+        }
     }
 
     // Streaming parse -> streaming write must round-trip every fixture byte-for-byte.
     [Test]
-    [Arguments("Box.glb")]
-    [Arguments("MinimalVrm0.vrm")]
-    [Arguments("MinimalVrm1.vrm")]
+    [Arguments(Fixtures.Box)]
+    [Arguments(Fixtures.MinimalVrm0)]
+    [Arguments(Fixtures.MinimalVrm1)]
     public async Task ParseAsyncThenWriteToAsync_ShouldRoundTripByteForByte_WhenReadingFixture(string name)
     {
         // Arrange
-        byte[] original = await File.ReadAllBytesAsync(FixturePath(name));
+        byte[] original = await File.ReadAllBytesAsync(Fixtures.PathOf(name));
 
         // Act
         await using var source = new MemoryStream(original, writable: false);
@@ -62,7 +60,7 @@ public sealed partial class GlbDocumentTests
         await document.WriteToAsync(destination);
 
         // Assert
-        destination.ToArray().ShouldBe(original);
+        await Assert.That(destination.ToArray()).IsEquivalentTo(original, CollectionOrdering.Matching);
     }
 
     // WriteToAsync must emit the same bytes as the synchronous ToBytes() for arbitrary payloads,
@@ -78,7 +76,7 @@ public sealed partial class GlbDocumentTests
     public async Task WriteToAsync_ShouldMatchSyncToBytes_WhenPayloadLengthVaries(int length)
     {
         // Arrange
-        byte[] binary = new Faker { Random = new Randomizer(length + 1) }.Random.Bytes(length);
+        byte[] binary = GlbTestData.Payload(length);
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, binary);
         GlbDocument document = GlbDocument.Parse(glb).Value;
 
@@ -87,9 +85,11 @@ public sealed partial class GlbDocumentTests
         await document.WriteToAsync(destination);
 
         // Assert
-        destination.ShouldSatisfyAllConditions(
-            () => destination.ToArray().ShouldBe(document.ToBytes()),
-            () => destination.ToArray().ShouldBe(glb));
+        using (Assert.Multiple())
+        {
+            await Assert.That(destination.ToArray()).IsEquivalentTo(document.ToBytes(), CollectionOrdering.Matching);
+            await Assert.That(destination.ToArray()).IsEquivalentTo(glb, CollectionOrdering.Matching);
+        }
     }
 
     [Test]
@@ -103,26 +103,27 @@ public sealed partial class GlbDocumentTests
         GlbDocument document = (await GlbDocument.ParseAsync(stream)).Value;
 
         // Assert
-        document.ShouldSatisfyAllConditions(
-            () => document.Version.ShouldBe(GlbDocument.SupportedVersion),
-            () => document.HasBinary.ShouldBeFalse(),
-            () => document.Binary.HasValue.ShouldBeFalse(),
-            () => document.Json.IsEmpty.ShouldBeFalse());
+        using (Assert.Multiple())
+        {
+            await Assert.That(document.Version).IsEqualTo(GlbDocument.SupportedVersion);
+            await Assert.That(document.HasBinary).IsFalse();
+            await Assert.That(document.Binary.HasValue).IsFalse();
+            await Assert.That(document.Json.IsEmpty).IsFalse();
+        }
     }
 
     [Test]
     public async Task ParseAsync_ShouldReturnTooShortError_WhenStreamShorterThanHeader()
     {
         // Arrange
-        await using var stream = new MemoryStream([0x67, 0x6C, 0x54]); // 3 bytes
+        byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson)[..(GlbTestData.HeaderSize - 1)];
+        await using var stream = new MemoryStream(glb, writable: false);
 
         // Act
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeFalse(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.TooShort));
+        await AssertFailsWith(result, GlbErrorCode.TooShort);
     }
 
     [Test]
@@ -130,66 +131,58 @@ public sealed partial class GlbDocumentTests
     {
         // Arrange
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        BinaryPrimitives.WriteUInt32LittleEndian(glb, 0xDEADBEEF);
+        BinaryPrimitives.WriteUInt32LittleEndian(glb, ~GlbDocument.Magic);
 
         // Act
         await using var stream = new MemoryStream(glb, writable: false);
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeFalse(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.BadMagic));
+        await AssertFailsWith(result, GlbErrorCode.BadMagic);
     }
 
     [Test]
-    public async Task ParseAsync_ShouldReturnUnsupportedVersionError_WhenVersionIsNotTwo()
+    public async Task ParseAsync_ShouldReturnUnsupportedVersionError_WhenVersionIsNotSupported()
     {
         // Arrange
-        byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(4), 1);
+        byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, version: GlbDocument.SupportedVersion - 1);
 
         // Act
         await using var stream = new MemoryStream(glb, writable: false);
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeFalse(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.UnsupportedVersion));
+        await AssertFailsWith(result, GlbErrorCode.UnsupportedVersion);
     }
 
     [Test]
     public async Task ParseAsync_ShouldReturnChunkPayloadTruncatedError_WhenStreamEndsMidPayload()
     {
         // Arrange — drop the trailing BIN payload bytes while leaving the header's declared length intact.
-        byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, [1, 2, 3, 4]);
-        byte[] truncated = glb[..^4];
+        byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson, GlbTestData.Payload(GlbTestData.ChunkAlignment));
+        byte[] truncated = glb[..^GlbTestData.ChunkAlignment];
 
         // Act
         await using var stream = new MemoryStream(truncated, writable: false);
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeFalse(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.ChunkPayloadTruncated));
+        await AssertFailsWith(result, GlbErrorCode.ChunkPayloadTruncated);
     }
 
     [Test]
     public async Task ParseAsync_ShouldReturnChunkUnalignedError_WhenChunkLengthNotFourByteAligned()
     {
-        // Arrange — corrupt the JSON chunk length (at offset 12) to a value that is not 4-byte aligned.
+        // Arrange — 4-aligned JSON chunk length minus 1 => not a multiple of 4.
         byte[] glb = GlbTestData.Build(GlbTestData.MinimalGltfJson);
-        BinaryPrimitives.WriteUInt32LittleEndian(glb.AsSpan(12), 7);
+        Span<byte> lengthField = glb.AsSpan(GlbTestData.FirstChunkLengthOffset);
+        BinaryPrimitives.WriteUInt32LittleEndian(lengthField, BinaryPrimitives.ReadUInt32LittleEndian(lengthField) - 1);
 
         // Act
         await using var stream = new MemoryStream(glb, writable: false);
         Result<GlbDocument> result = await GlbDocument.ParseAsync(stream);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeFalse(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.ChunkUnaligned));
+        await AssertFailsWith(result, GlbErrorCode.ChunkUnaligned);
     }
 }

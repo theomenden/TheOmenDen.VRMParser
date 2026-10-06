@@ -11,7 +11,8 @@
   <ItemGroup>
     <PackageReference Include="TUnit" />
     <PackageReference Include="TUnit.Mocks" />
-    <PackageReference Include="Shouldly" />
+    <PackageReference Include="TUnit.Assertions" />
+    <PackageReference Include="TUnit.Assertions.Should" />
     <PackageReference Include="Bogus" />
   </ItemGroup>
 

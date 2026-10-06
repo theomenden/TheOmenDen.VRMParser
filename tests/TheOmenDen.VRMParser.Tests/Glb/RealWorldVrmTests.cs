@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DotNext;
-using Shouldly;
+using TUnit.Assertions.Enums;
 using TheOmenDen.VRMParser.Glb;
 using TheOmenDen.VRMParser.Models.Records;
 
@@ -37,7 +37,7 @@ public sealed class RealWorldVrmTests
     // Real exporter output must parse and survive a parse -> write cycle byte-for-byte, exactly like
     // the committed Box.glb fixture but at full avatar scale (large BIN chunk, hundreds of accessors).
     [Test]
-    public void Parse_ShouldRoundTripByteForByte_WhenReadingRealModel()
+    public async Task Parse_ShouldRoundTripByteForByte_WhenReadingRealModel()
     {
         // Arrange
         byte[] original = LoadModelOrSkip();
@@ -46,13 +46,15 @@ public sealed class RealWorldVrmTests
         Result<GlbDocument> result = GlbDocument.Parse(original);
 
         // Assert
-        result.ShouldSatisfyAllConditions(
-            () => result.IsSuccessful.ShouldBeTrue(),
-            () => result.ErrorCode().ShouldBe(GlbErrorCode.None),
-            () => result.Value.Version.ShouldBe(GlbDocument.SupportedVersion),
-            () => result.Value.HasBinary.ShouldBeTrue(),
-            () => result.Value.Json.IsEmpty.ShouldBeFalse(),
-            () => result.Value.ToBytes().ShouldBe(original));
+        using (Assert.Multiple())
+        {
+            await Assert.That(result.IsSuccessful).IsTrue();
+            await Assert.That(result.ErrorCode()).IsEqualTo(GlbErrorCode.None);
+            await Assert.That(result.Value.Version).IsEqualTo(GlbDocument.SupportedVersion);
+            await Assert.That(result.Value.HasBinary).IsTrue();
+            await Assert.That(result.Value.Json.IsEmpty).IsFalse();
+            await Assert.That(result.Value.ToBytes()).IsEquivalentTo(original, CollectionOrdering.Matching);
+        }
     }
 
     // The streaming async path must agree with the synchronous path on a real, large container.
@@ -68,18 +70,20 @@ public sealed class RealWorldVrmTests
         GlbDocument async = (await GlbDocument.ParseAsync(stream)).Value;
 
         // Assert
-        async.ShouldSatisfyAllConditions(
-            () => async.Version.ShouldBe(sync.Version),
-            () => async.Json.ToArray().ShouldBe(sync.Json.ToArray()),
-            () => async.HasBinary.ShouldBe(sync.HasBinary),
-            () => async.Binary.Value.ToArray().ShouldBe(sync.Binary.Value.ToArray()),
-            () => async.ToBytes().ShouldBe(original));
+        using (Assert.Multiple())
+        {
+            await Assert.That(async.Version).IsEqualTo(sync.Version);
+            await Assert.That(async.Json.ToArray()).IsEquivalentTo(sync.Json.ToArray(), CollectionOrdering.Matching);
+            await Assert.That(async.HasBinary).IsEqualTo(sync.HasBinary);
+            await Assert.That(async.Binary.Value.ToArray()).IsEquivalentTo(sync.Binary.Value.ToArray(), CollectionOrdering.Matching);
+            await Assert.That(async.ToBytes()).IsEquivalentTo(original, CollectionOrdering.Matching);
+        }
     }
 
     // The JSON chunk must bind to the strongly-typed glTF core model and expose a coherent glTF 2.0
     // asset header — proving the typed bridge works on real, non-synthesized JSON.
     [Test]
-    public void ParseGltf_ShouldBindTypedModelWithGltf2Asset_WhenReadingRealModel()
+    public async Task ParseGltf_ShouldBindTypedModelWithGltf2Asset_WhenReadingRealModel()
     {
         // Arrange
         GlbDocument document = GlbDocument.Parse(LoadModelOrSkip()).Value;
@@ -89,13 +93,13 @@ public sealed class RealWorldVrmTests
         GltfRoot root = parsed.RootElement;
 
         // Assert
-        root.Asset.Version.GetString().ShouldBe("2.0");
+        await Assert.That(root.Asset.Version.GetString()).IsEqualTo(GlbTestData.GltfAssetVersion);
     }
 
     // A real avatar carries a VRM extension (0.x VRM or 1.0 VRMC_vrm); whichever it is must be
     // present and preserved verbatim in the JSON chunk so it survives a round-trip.
     [Test]
-    public void Parse_ShouldPreserveVrmExtension_WhenReadingRealModel()
+    public async Task Parse_ShouldPreserveVrmExtension_WhenReadingRealModel()
     {
         // Arrange
         GlbDocument document = GlbDocument.Parse(LoadModelOrSkip()).Value;
@@ -103,16 +107,18 @@ public sealed class RealWorldVrmTests
         // Act
         using JsonDocument json = JsonDocument.Parse(document.Json);
         JsonElement gltf = json.RootElement;
-        bool hasExtensions = gltf.TryGetProperty("extensions"u8, out JsonElement extensions);
-        bool isVrm0 = hasExtensions && extensions.TryGetProperty("VRM"u8, out _);
-        bool isVrm1 = hasExtensions && extensions.TryGetProperty("VRMC_vrm"u8, out _);
+        bool hasExtensions = gltf.TryGetProperty(VrmJson.Extensions, out JsonElement extensions);
+        bool isVrm0 = hasExtensions && extensions.TryGetProperty(VrmJson.Vrm0Extension, out _);
+        bool isVrm1 = hasExtensions && extensions.TryGetProperty(VrmJson.Vrm1Extension, out _);
 
         // Assert
-        gltf.ShouldSatisfyAllConditions(
-            () => hasExtensions.ShouldBeTrue("real avatar export should declare glTF extensions"),
-            () => (isVrm0 || isVrm1).ShouldBeTrue("expected a VRM 0.x (VRM) or VRM 1.0 (VRMC_vrm) extension"),
-            () => gltf.GetProperty("extensionsUsed"u8).EnumerateArray()
-                .Select(e => e.GetString())
-                .ShouldContain(isVrm1 ? "VRMC_vrm" : "VRM"));
+        using (Assert.Multiple())
+        {
+            await Assert.That(hasExtensions).IsTrue().Because("real avatar export should declare glTF extensions");
+            await Assert.That(isVrm0 || isVrm1).IsTrue()
+                .Because($"expected a VRM 0.x ({VrmJson.Vrm0Extension}) or VRM 1.0 ({VrmJson.Vrm1Extension}) extension");
+            await Assert.That(gltf.GetProperty(VrmJson.ExtensionsUsed).EnumerateArray()
+                .Select(e => e.GetString()).ToList()).Contains(isVrm1 ? VrmJson.Vrm1Extension : VrmJson.Vrm0Extension);
+        }
     }
 }
