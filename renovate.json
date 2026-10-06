@@ -7,13 +7,60 @@
     "mergeConfidence:all-badges",
     "helpers:pinGitHubActionDigests"
   ],
+  "timezone": "America/New_York",
+  "schedule": [
+    "before 9am on tuesday"
+  ],
   "automergeStrategy": "squash",
+  "minimumReleaseAge": "3 days",
   "packageRules": [
     {
       "description": "Auto-merge non-major updates (squash); majors stay manual",
-      "matchUpdateTypes": ["minor", "patch", "digest"],
-      "matchCurrentVersion": "!/^0/",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "automerge": true
+    },
+    {
+      "description": "Corvus runtime and source generator must stay in lockstep",
+      "matchPackageNames": [
+        "Corvus.Text.Json*"
+      ],
+      "groupName": "Corvus.Text.Json"
+    },
+    {
+      "matchPackageNames": [
+        "DotNext*"
+      ],
+      "groupName": "DotNext"
+    },
+    {
+      "matchPackageNames": [
+        "TUnit*"
+      ],
+      "groupName": "TUnit"
+    },
+    {
+      "matchPackageNames": [
+        "BenchmarkDotNet*"
+      ],
+      "groupName": "BenchmarkDotNet"
+    },
+    {
+      "matchPackageNames": [
+        "Roslynator*",
+        "SonarAnalyzer*",
+        "Microsoft.CodeAnalysis.*Analyzers"
+      ],
+      "groupName": "analyzers"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions"
     }
   ]
 }
